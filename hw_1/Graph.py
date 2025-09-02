@@ -1,25 +1,24 @@
 #CECS 427: Assignment Graphs 
 #09/16/2025
 #Ryan Tomas
-#design, implement, and analyze a modular program capable of: 
-#Generating and exporting Erdős–Rényi graphs; Importing and analyzing graphs from .gml files; 
-#Performing multi-source BFS with path tracking; Identifying connected components; Detecting cycles and isolated nodes; 
-#Visualizing graphs with annotated paths and substructures; Exporting computed metadata alongside the graph
 import matplotlib #to graph the output
 import argparse #this allows parmeters in the command line
+import networkx as nx
+import numpy as np
 
-def input(graph_file):
+def input(fileName):
     """
     Reads a graph from the given .gml file and uses it for all subsequent operations.
     """
-    pass
+    graph = nx.read_gml(fileName)
+    return graph
 
 def create_random_graph(n,c):
     """
     This function is a Command_Line strcture which makes n nodes and edge probablity p = (c * ln n) /n
     Overrides --input command and nodes must be labeled with strings ("0", "1",..,"n-1")
     """
-    pass
+    p = c * (np.log(n)/n)
 
 def multi_BFS(a1,a2):
     """
