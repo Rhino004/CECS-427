@@ -20,7 +20,7 @@ def create_random_graph(n,c):
     """
     p = c * (np.log(n)/n)
 
-def multi_BFS(a1,a2):
+def multi_BFS(a1,a2):#need to fix this parameters
     """
     Accepts one or more starting nodes and computes BFS trees from each, storing all shortest paths. Each BFS tree must be independently visualized and compared.
     """
