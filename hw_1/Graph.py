@@ -1,7 +1,7 @@
 #CECS 427: Assignment Graphs 
 #09/16/2025
 #Ryan Tomas
-import matplotlib #to graph the output
+import matplotlib.pyplot as plt #to graph the output
 import argparse #this allows parmeters in the command line
 import networkx as nx
 import numpy as np
@@ -19,28 +19,89 @@ def create_random_graph(n,c):
     Overrides --input command and nodes must be labeled with strings ("0", "1",..,"n-1")
     """
     p = c * (np.log(n)/n)
+    graph = nx.gnp_random_graph(n, p)
+    return graph
 
-def multi_BFS(a1,a2):#need to fix this parameters
+def multi_BFS(G,*sources):#need to fix this parameters
     """
     Accepts one or more starting nodes and computes BFS trees from each, storing all shortest paths. Each BFS tree must be independently visualized and compared.
     """
-    pass
+    trees = {}
+    for s in sources:
+        print(f"[multi_BFS] BFS from {s}")
+        
+        # BFS tree rooted at s
+        tree = nx.bfs_tree(G, s)
+        trees[s] = tree
+        
+        # Report some stats
+        paths = dict(nx.single_source_shortest_path(G, s))
+        print(f"  Reached {len(paths)} nodes")
+        
+        # Visualize tree
+        plt.figure(figsize=(5, 4))
+        nx.draw(tree, with_labels=True, node_color="lightgreen", edge_color="black")
+        plt.title(f"BFS Tree from {s}")
+        plt.show()
 
-def analyze():
+    # Optional: Compare coverage between BFS trees
+    if len(sources) > 1:
+        print("[multi_BFS] Comparing BFS trees...")
+        covered_sets = {s: set(t.nodes()) for s, t in trees.items()}
+        for s1 in sources:
+            for s2 in sources:
+                if s1 < s2:
+                    overlap = covered_sets[s1] & covered_sets[s2]
+                    print(f"  Overlap between {s1} and {s2}: {len(overlap)} nodes")
+    
+    return trees
+
+def analyze(Graph):
     """
     Performs additional structural analyses on the graph, including:Connected Components, Cycle Detection, Isolated Nodes,Graph Density, Average Shortest Path Length
     """
-    pass
+    print("[analyze] Performing structural analysis...")
 
-def plot():
+    # 1. Connected components
+    num_components = nx.number_connected_components(Graph)
+    print(f"  Connected Components: {num_components}")
+
+    # 2. Cycle detection
+    try:
+        cycle = nx.find_cycle(Graph)
+        print(f"  Contains cycle: Yes (example cycle: {cycle})")
+    except nx.exception.NetworkXNoCycle:
+        print("  Contains cycle: No")
+
+    # 3. Isolated nodes
+    isolated = list(nx.isolates(Graph))
+    if isolated:
+        print(f"  Isolated Nodes: {len(isolated)} -> {isolated}")
+    else:
+        print("  Isolated Nodes: None")
+
+    # 4. Graph density
+    density = nx.density(Graph)
+    print(f"  Graph Density: {density:.4f}")
+
+    # 5. Average shortest path length
+    if nx.is_connected(Graph):
+        avg_path_len = nx.average_shortest_path_length(Graph)
+        print(f"  Avg Shortest Path Length: {avg_path_len:.4f}")
+    else:
+        print("  Avg Shortest Path Length: Not computed (graph is disconnected)")
+
+def plot(graph):
     """
     visulaes the graph with Highlighted shortest paths from each BFS root node; Distinct styling for isolated nodes; Optional visualization of individual connected components.
     """
-    pass
+    nx.draw(graph, with_labels=True, node_color="lightblue", edge_color="gray")
+    plt.show()
 
-def output(filename):
+def output(graph, filename):
     """Saves the final graph, with all computed attributes (e.g., distances, parent nodes, component IDs), to the specified .gml file."""
-    pass
+    print(f"[output] Saving graph to {filename}")
+    nx.write_gml(graph, filename)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("graph_example")
@@ -65,3 +126,4 @@ if __name__ == "__main__":
                         help="Acceaptes a string that is <fileName>")
 
     args = parser.parse_args()
+    #still need to add the logic of main
