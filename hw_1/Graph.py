@@ -62,29 +62,29 @@ def analyze(Graph):
     """
     print("[analyze] Performing structural analysis...")
 
-    # 1. Connected components
+    #Connected components
     num_components = nx.number_connected_components(Graph)
     print(f"  Connected Components: {num_components}")
 
-    # 2. Cycle detection
+    #Cycle detection
     try:
         cycle = nx.find_cycle(Graph)
         print(f"  Contains cycle: Yes (example cycle: {cycle})")
     except nx.exception.NetworkXNoCycle:
         print("  Contains cycle: No")
 
-    # 3. Isolated nodes
+    #Isolated nodes
     isolated = list(nx.isolates(Graph))
     if isolated:
         print(f"  Isolated Nodes: {len(isolated)} -> {isolated}")
     else:
         print("  Isolated Nodes: None")
 
-    # 4. Graph density
+    #Graph density
     density = nx.density(Graph)
     print(f"  Graph Density: {density:.4f}")
 
-    # 5. Average shortest path length
+    #Average shortest path length
     if nx.is_connected(Graph):
         avg_path_len = nx.average_shortest_path_length(Graph)
         print(f"  Avg Shortest Path Length: {avg_path_len:.4f}")
@@ -127,3 +127,24 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     #still need to add the logic of main
+    G = None
+    if args.create_random_graph:
+        n, c = args.create_random_graph
+        G = create_random_graph(int(n), c)
+    elif args.input:
+        G = input(args.input)
+
+    if G is None:
+        raise ValueError("You must create a random graph or load one with --input")
+
+    if args.multi_BFS:
+        multi_BFS(G, *args.multi_BFS)
+
+    if args.analyze:
+        analyze(G)
+
+    if args.plot:
+        plot(G)
+
+    if args.output:
+        output(G, args.output)
