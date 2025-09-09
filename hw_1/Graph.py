@@ -44,7 +44,6 @@ def multi_BFS(G,*sources):#need to fix this parameters
         plt.title(f"BFS Tree from {s}")
         plt.show()
 
-    # Optional: Compare coverage between BFS trees
     if len(sources) > 1:
         print("[multi_BFS] Comparing BFS trees...")
         covered_sets = {s: set(t.nodes()) for s, t in trees.items()}
