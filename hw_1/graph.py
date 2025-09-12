@@ -26,7 +26,8 @@ def create_random_graph(n,c):
 
 def multi_BFS(G,*sources):#need to fix this parameters
     """
-    Accepts one or more starting nodes and computes BFS trees from each, storing all shortest paths. Each BFS tree must be independently visualized and compared.
+    Accepts one or more starting nodes and computes BFS trees from each, storing all shortest paths.
+    Each BFS tree must be independently visualized and compared.
     """
     trees = {}
     for s in sources:
@@ -59,7 +60,8 @@ def multi_BFS(G,*sources):#need to fix this parameters
 
 def analyze(Graph):
     """
-    Performs additional structural analyses on the graph, including:Connected Components, Cycle Detection, Isolated Nodes,Graph Density, Average Shortest Path Length
+    Performs additional structural analyses on the graph, including:Connected Components,
+    Cycle Detection, Isolated Nodes,Graph Density, Average Shortest Path Length
     """
     print("[analyze] Performing structural analysis...")
 
@@ -116,7 +118,7 @@ if __name__ == "__main__":
     parser.add_argument("--multi_BFS", nargs="+", type=int,
                         help="Accepts one or more starting nodes and computes BFS trees from each <node>")
     #if a input is graph is given
-    parser.add_argument("--input", nargs=1, type=str,
+    parser.add_argument("--input", type=str,
                         help="Accepts a string that is <fileName>")
     
     #other arguments
@@ -126,7 +128,7 @@ if __name__ == "__main__":
     parser.add_argument("--plot", action="store_true",
                         help="plot the graph structure")
     
-    parser.add_argument("--output", nargs=1, type=str,
+    parser.add_argument("--output", type=str,
                         help="Accepts a string that is <fileName>")
 
     args = parser.parse_args()
@@ -136,7 +138,7 @@ if __name__ == "__main__":
         n, c = args.create_random_graph
         G = create_random_graph(int(n), c)
     elif args.input:
-        G = input(args.input[0])
+        G = input(args.input)
 
     if G is None:
         raise ValueError("You must create a random graph or load one with --input")
@@ -151,4 +153,4 @@ if __name__ == "__main__":
         plot(G)
 
     if args.output:
-        output(G, args.output[0])
+        output(G, args.output)
