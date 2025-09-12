@@ -1,10 +1,12 @@
 #CECS 427: Assignment Graphs 
 #09/16/2025
 #Ryan Tomas
+#Nick Fan
 import matplotlib.pyplot as plt #to graph the output
 import argparse #this allows parmeters in the command line
 import networkx as nx
 import numpy as np
+from pathlib import Path
 
 def input(fileName):
     """
@@ -92,37 +94,40 @@ def analyze(Graph):
 
 def plot(graph):
     """
-    visulaes the graph with Highlighted shortest paths from each BFS root node; Distinct styling for isolated nodes; Optional visualization of individual connected components.
+    Visualizes the graph with highlighted shortest paths from each BFS root node.
+    Distinct styling for isolated nodes, optional visualization of individual connected components.
     """
     nx.draw(graph, with_labels=True, node_color="lightblue", edge_color="gray")
     plt.show()
 
 def output(graph, filename):
-    """Saves the final graph, with all computed attributes (e.g., distances, parent nodes, component IDs), to the specified .gml file."""
+    """Saves the final graph, with all computed attributes
+    (e.g., distances, parent nodes, component IDs), to the specified .gml file.
+    """
     print(f"[output] Saving graph to {filename}")
-    nx.write_gml(graph, filename)
+    nx.write_gml(graph, Path(filename))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("graph_example")
     #if no input graph is given
-    parser.add_argument("create_random_graph", nargs=2, type=float,
+    parser.add_argument("--create_random_graph", nargs=2, type=float,
                         help= "creates a random graph: <num_nodes> <average degree of a node>")
     
-    parser.add_argument("multi_BFS", nargs="+", type=int,
+    parser.add_argument("--multi_BFS", nargs="+", type=int,
                         help="Accepts one or more starting nodes and computes BFS trees from each <node>")
     #if a input is graph is given
-    parser.add_argument("input", nargs=1, type=str,
-                        help="Acceaptes a string that is <fileName>")
+    parser.add_argument("--input", nargs=1, type=str,
+                        help="Accepts a string that is <fileName>")
     
     #other arguments
-    parser.add_argument("analyze", action="store_true",
+    parser.add_argument("--analyze", action="store_true",
                         help="Analyze the graph structure")
     
-    parser.add_argument("plot", action="store_true",
+    parser.add_argument("--plot", action="store_true",
                         help="plot the graph structure")
     
-    parser.add_argument("output", nargs=1, type=str,
-                        help="Acceaptes a string that is <fileName>")
+    parser.add_argument("--output", nargs=1, type=str,
+                        help="Accepts a string that is <fileName>")
 
     args = parser.parse_args()
     #still need to add the logic of main
@@ -131,7 +136,7 @@ if __name__ == "__main__":
         n, c = args.create_random_graph
         G = create_random_graph(int(n), c)
     elif args.input:
-        G = input(args.input)
+        G = input(args.input[0])
 
     if G is None:
         raise ValueError("You must create a random graph or load one with --input")
@@ -146,4 +151,4 @@ if __name__ == "__main__":
         plot(G)
 
     if args.output:
-        output(G, args.output)
+        output(G, args.output[0])
