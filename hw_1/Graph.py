@@ -105,23 +105,23 @@ def output(graph, filename):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("graph_example")
     #if no input graph is given
-    parser.add_argument("create_random_graph", nargs=2, type=float,
+    parser.add_argument("--create_random_graph", nargs=2, type=float,
                         help= "creates a random graph: <num_nodes> <average degree of a node>")
     
-    parser.add_argument("multi_BFS", nargs="+", type=int,
+    parser.add_argument("--multi_BFS", nargs="+", type=int,
                         help="Accepts one or more starting nodes and computes BFS trees from each <node>")
     #if a input is graph is given
-    parser.add_argument("input", nargs=1, type=str,
+    parser.add_argument("--input", nargs=1, type=str,
                         help="Acceaptes a string that is <fileName>")
     
     #other arguments
-    parser.add_argument("analyze", action="store_true",
+    parser.add_argument("--analyze", action="store_true",
                         help="Analyze the graph structure")
     
-    parser.add_argument("plot", action="store_true",
+    parser.add_argument("--plot", action="store_true",
                         help="plot the graph structure")
     
-    parser.add_argument("output", nargs=1, type=str,
+    parser.add_argument("--output", type=str,
                         help="Acceaptes a string that is <fileName>")
 
     args = parser.parse_args()
