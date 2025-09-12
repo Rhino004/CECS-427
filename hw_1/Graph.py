@@ -25,13 +25,48 @@ def create_random_graph(n,c):
     graph = nx.relabel_nodes(graph, lambda x: str(x))
     return graph
 
-def multi_BFS(G,*sources):#need to fix this parameters
+def hierarchical_pos(tree, root):
+    """
+    Assign positions to nodes so that BFS tree levels are neatly arranged.
+    root: root node of BFS tree
+    """
+    def _hierarchy_pos(node, left, right, depth=0, pos=None):
+        if pos is None:
+            pos = {}
+        # Place node in the center of its allocated horizontal space
+        pos[node] = ((left + right) / 2, -depth)
+        children = list(tree.neighbors(node))
+        if not children:
+            return pos
+        dx = (right - left) / max(1, len(children))  # divide space among children
+        for i, child in enumerate(children):
+            child_left = left + i * dx
+            child_right = left + (i + 1) * dx
+            _hierarchy_pos(child, child_left, child_right, depth + 1, pos)
+        return pos
+
+    return _hierarchy_pos(root, -2, 2)
+
+def multi_BFS(G, *sources):
     """
     Accepts one or more starting nodes and computes BFS trees from each, storing all shortest paths.
-    Each BFS tree must be independently visualized and compared.
+    Each BFS tree is independently visualized in a hierarchical layout.
     """
-    trees = {}
+    # Convert numeric string nodes to integers if graph nodes are integers
+    converted_sources = []
     for s in sources:
+        if s in G:
+            converted_sources.append(s)
+        elif isinstance(s, str) and s.isdigit() and int(s) in G:
+            converted_sources.append(int(s))
+        else:
+            print(f"[multi_BFS] Skipping {s}: not in graph")
+    if not converted_sources:
+        print("[multi_BFS] No valid source nodes found")
+        return {}
+
+    trees = {}
+    for s in converted_sources:
         print(f"[multi_BFS] BFS from {s}")
         
         # BFS tree rooted at s
@@ -40,22 +75,24 @@ def multi_BFS(G,*sources):#need to fix this parameters
         
         # Report some stats
         paths = dict(nx.single_source_shortest_path(G, s))
-        print(f"Reached {len(paths)} nodes")
+        print(f"  Reached {len(paths)} nodes")
         
-        # Visualize tree
-        plt.figure(figsize=(5, 4))
-        nx.draw(tree, with_labels=True, node_color="lightgreen", edge_color="black")
+        # Visualize tree hierarchically
+        pos = hierarchical_pos(tree, s)
+        plt.figure(figsize=(7, 7))
+        nx.draw(tree, pos, with_labels=True, node_color="lightgreen", edge_color="black", node_size = 500)
         plt.title(f"BFS Tree from {s}")
+        plt.gcf().canvas.manager.set_window_title(f"BFS Tree from {s}")
         plt.show()
 
-    if len(sources) > 1:
+    # Compare coverage if multiple BFS sources
+    if len(converted_sources) > 1:
         print("[multi_BFS] Comparing BFS trees...")
         covered_sets = {s: set(t.nodes()) for s, t in trees.items()}
-        for s1 in sources:
-            for s2 in sources:
-                if s1 < s2:
-                    overlap = covered_sets[s1] & covered_sets[s2]
-                    print(f"  Overlap between {s1} and {s2}: {len(overlap)} nodes")
+        for i, s1 in enumerate(converted_sources):
+            for s2 in converted_sources[i+1:]:
+                overlap = covered_sets[s1] & covered_sets[s2]
+                print(f"  Overlap between {s1} and {s2}: {len(overlap)} nodes")
     
     return trees
 
