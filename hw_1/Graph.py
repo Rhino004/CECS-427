@@ -1,10 +1,12 @@
 #CECS 427: Assignment Graphs 
 #09/16/2025
 #Ryan Tomas
+#Nick Fan
 import matplotlib.pyplot as plt #to graph the output
 import argparse #this allows parmeters in the command line
 import networkx as nx
 import numpy as np
+from pathlib import Path
 
 def input(fileName):
     """
@@ -24,7 +26,8 @@ def create_random_graph(n,c):
 
 def multi_BFS(G,*sources):#need to fix this parameters
     """
-    Accepts one or more starting nodes and computes BFS trees from each, storing all shortest paths. Each BFS tree must be independently visualized and compared.
+    Accepts one or more starting nodes and computes BFS trees from each, storing all shortest paths.
+    Each BFS tree must be independently visualized and compared.
     """
     trees = {}
     for s in sources:
@@ -57,7 +60,8 @@ def multi_BFS(G,*sources):#need to fix this parameters
 
 def analyze(Graph):
     """
-    Performs additional structural analyses on the graph, including:Connected Components, Cycle Detection, Isolated Nodes,Graph Density, Average Shortest Path Length
+    Performs additional structural analyses on the graph, including:Connected Components,
+    Cycle Detection, Isolated Nodes,Graph Density, Average Shortest Path Length
     """
     print("[analyze] Performing structural analysis...")
 
@@ -92,15 +96,18 @@ def analyze(Graph):
 
 def plot(graph):
     """
-    visulaes the graph with Highlighted shortest paths from each BFS root node; Distinct styling for isolated nodes; Optional visualization of individual connected components.
+    Visualizes the graph with highlighted shortest paths from each BFS root node.
+    Distinct styling for isolated nodes, optional visualization of individual connected components.
     """
     nx.draw(graph, with_labels=True, node_color="lightblue", edge_color="gray")
     plt.show()
 
 def output(graph, filename):
-    """Saves the final graph, with all computed attributes (e.g., distances, parent nodes, component IDs), to the specified .gml file."""
+    """Saves the final graph, with all computed attributes
+    (e.g., distances, parent nodes, component IDs), to the specified .gml file.
+    """
     print(f"[output] Saving graph to {filename}")
-    nx.write_gml(graph, filename)
+    nx.write_gml(graph, Path(filename))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("graph_example")
@@ -111,8 +118,8 @@ if __name__ == "__main__":
     parser.add_argument("--multi_BFS", nargs="+", type=int,
                         help="Accepts one or more starting nodes and computes BFS trees from each <node>")
     #if a input is graph is given
-    parser.add_argument("--input", nargs=1, type=str,
-                        help="Acceaptes a string that is <fileName>")
+    parser.add_argument("--input", type=str,
+                        help="Accepts a string that is <fileName>")
     
     #other arguments
     parser.add_argument("--analyze", action="store_true",
@@ -122,7 +129,7 @@ if __name__ == "__main__":
                         help="plot the graph structure")
     
     parser.add_argument("--output", type=str,
-                        help="Acceaptes a string that is <fileName>")
+                        help="Accepts a string that is <fileName>")
 
     args = parser.parse_args()
     #still need to add the logic of main
