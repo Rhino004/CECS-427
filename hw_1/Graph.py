@@ -21,7 +21,8 @@ def create_random_graph(n,c):
     Overrides --input command and nodes must be labeled with strings ("0", "1",..,"n-1")
     """
     p = c * (np.log(n)/n)
-    graph = nx.gnp_random_graph(n, p)
+    graph = nx.erdos_renyi_graph(n, p)
+    graph = nx.relabel_nodes(graph, lambda x: str(x))
     return graph
 
 def multi_BFS(G,*sources):#need to fix this parameters
@@ -39,7 +40,7 @@ def multi_BFS(G,*sources):#need to fix this parameters
         
         # Report some stats
         paths = dict(nx.single_source_shortest_path(G, s))
-        print(f"  Reached {len(paths)} nodes")
+        print(f"Reached {len(paths)} nodes")
         
         # Visualize tree
         plt.figure(figsize=(5, 4))
@@ -115,7 +116,7 @@ if __name__ == "__main__":
     parser.add_argument("--create_random_graph", nargs=2, type=float,
                         help= "creates a random graph: <num_nodes> <average degree of a node>")
     
-    parser.add_argument("--multi_BFS", nargs="+", type=int,
+    parser.add_argument("--multi_BFS", nargs="+", type=str,
                         help="Accepts one or more starting nodes and computes BFS trees from each <node>")
     #if a input is graph is given
     parser.add_argument("--input", type=str,
