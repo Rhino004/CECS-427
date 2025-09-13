@@ -18,3 +18,7 @@ Key features:
 - Python 3.11
 - install dependencies:
     pip install networks matplotlib numpy
+
+# Examples of commands and outputs
+- python ./graph.py --create_random_graph 20 1.5 --multi_BFS 0 5 20 --analyze --plot --output final_graph.gml
+- python ./graph.py --input data.gml --analyze --plot
