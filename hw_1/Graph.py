@@ -12,23 +12,30 @@ def input(fileName):
     """
     Reads a graph from the given .gml file and uses it for all subsequent operations.
     """
-    graph = nx.read_gml(fileName)
-    return graph
+    try:
+            
+        graph = nx.read_gml(fileName)
+        return graph
+    except FileNotFoundError:
+        print(f"[input]The File {fileName} doesn't exist")
+    except (nx.NetworkXError, OSError, ValueError) as e:
+        print(f"[input] Error: Could not read graph from '{fileName}': {e}")
+        return None
 
 def create_random_graph(n,c):
     """
     This function is a Command_Line strcture which makes n nodes and edge probablity p = (c * ln n) /n
     Overrides --input command and nodes must be labeled with strings ("0", "1",..,"n-1")
     """
-    p = c * (np.log(n)/n)
+    p = c * (np.log(n)/n) # we find the probabilty
     graph = nx.erdos_renyi_graph(n, p)
-    graph = nx.relabel_nodes(graph, lambda x: str(x))
+    graph = nx.relabel_nodes(graph, lambda x: str(x)) #making the nodes into string
     return graph
 
 def hierarchical_pos(tree, root):
     """
-    Assign positions to nodes so that BFS tree levels are neatly arranged.
-    root: root node of BFS tree
+    This function is to help neetly organize the BFS tree
+    when plotting
     """
     def _hierarchy_pos(node, left, right, depth=0, pos=None):
         if pos is None:
@@ -38,7 +45,7 @@ def hierarchical_pos(tree, root):
         children = list(tree.neighbors(node))
         if not children:
             return pos
-        dx = (right - left) / max(1, len(children))  # divide space among children
+        dx = (right - left) / max(1, len(children))  #divide space
         for i, child in enumerate(children):
             child_left = left + i * dx
             child_right = left + (i + 1) * dx
@@ -52,9 +59,11 @@ def multi_BFS(G, *sources):
     Accepts one or more starting nodes and computes BFS trees from each, storing all shortest paths.
     Each BFS tree is independently visualized in a hierarchical layout.
     """
-    # Convert numeric string nodes to integers if graph nodes are integers
+    if G is None:
+        print("[multi_BFS] Error: Graph is not defined.")
+        return {}
     converted_sources = []
-    for s in sources:
+    for s in sources: # go through the parameters given
         if s in G:
             converted_sources.append(s)
         elif isinstance(s, str) and s.isdigit() and int(s) in G:
@@ -73,7 +82,7 @@ def multi_BFS(G, *sources):
         tree = nx.bfs_tree(G, s)
         trees[s] = tree
         
-        # Report some stats
+        # Report stats
         paths = dict(nx.single_source_shortest_path(G, s))
         print(f"  Reached {len(paths)} nodes")
         
@@ -137,15 +146,20 @@ def plot(graph):
     Visualizes the graph with highlighted shortest paths from each BFS root node.
     Distinct styling for isolated nodes, optional visualization of individual connected components.
     """
+    
     nx.draw(graph, with_labels=True, node_color="lightblue", edge_color="gray")
     plt.show()
+
 
 def output(graph, filename):
     """Saves the final graph, with all computed attributes
     (e.g., distances, parent nodes, component IDs), to the specified .gml file.
     """
-    print(f"[output] Saving graph to {filename}")
-    nx.write_gml(graph, Path(filename))
+    try:
+        print(f"[output] Saving graph to {filename}")
+        nx.write_gml(graph, Path(filename))
+    except Exception as e:
+        print(f"[output] Error: Could not save graph to '{filename}': {e}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("graph_example")
@@ -170,7 +184,6 @@ if __name__ == "__main__":
                         help="Accepts a string that is <fileName>")
 
     args = parser.parse_args()
-    #still need to add the logic of main
     G = None
     if args.create_random_graph:
         n, c = args.create_random_graph
