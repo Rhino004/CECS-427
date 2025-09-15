@@ -2,7 +2,7 @@
 
 **Team Members:**
 - Ryan Tomas(028210102)
-- Nick Fan
+- Nick Fan(028347343)
 
 Description:
 This projoct is has one python file ('Graph.py') that takes parameters when initalizing.
@@ -17,4 +17,4 @@ Key features:
 # Requirements
 - Python 3.11
 - install dependencies:
-    pip install networks matplotlib numpy
+    pip install networkx matplotlib numpy
