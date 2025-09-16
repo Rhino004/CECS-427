@@ -3,6 +3,7 @@
 #Ryan Tomas
 #Nick Fan
 import matplotlib.pyplot as plt #to graph the output
+import matplotlib.patches as mpatches
 import argparse #this allows parmeters in the command line
 import networkx as nx
 import numpy as np
@@ -13,9 +14,11 @@ def input(fileName):
     Reads a graph from the given .gml file and uses it for all subsequent operations.
     """
     try:
-            
-        graph = nx.read_gml(fileName)
-        return graph
+
+        # Convert to simple undirected graph (remove direction/multi edges if any)
+        graph = nx.Graph(nx.read_gml(fileName))
+        # Normalize node labels to strings for consistency
+        return nx.relabel_nodes(graph, lambda x: str(x))
     except FileNotFoundError:
         print(f"[input]The File {fileName} doesn't exist")
     except (nx.NetworkXError, OSError, ValueError) as e:
@@ -27,7 +30,8 @@ def create_random_graph(n,c):
     This function is a Command_Line strcture which makes n nodes and edge probablity p = (c * ln n) /n
     Overrides --input command and nodes must be labeled with strings ("0", "1",..,"n-1")
     """
-    p = c * (np.log(n)/n) # we find the probabilty
+    if n <= 0: raise ValueError("n must be positive.")
+    p =  max(0.0, min(1.0, float(c * (np.log(n)/n)))) # we find the probabilty, clamp 0-1 range
     graph = nx.erdos_renyi_graph(n, p)
     graph = nx.relabel_nodes(graph, lambda x: str(x)) #making the nodes into string
     return graph
@@ -118,8 +122,10 @@ def analyze(Graph):
 
     #Cycle detection
     try:
-        cycle = nx.find_cycle(Graph)
-        print(f"  Contains cycle: Yes (example cycle: {cycle})")
+        cycles = nx.cycle_basis(Graph)
+        for c in cycles:
+            c.append(c[0])
+        print(f"  Contains cycle: Yes (example cycle: {cycles})")
     except nx.exception.NetworkXNoCycle:
         print("  Contains cycle: No")
 
@@ -141,15 +147,48 @@ def analyze(Graph):
     else:
         print("  Avg Shortest Path Length: Not computed (graph is disconnected)")
 
-def plot(graph):
+def plot(graph, bfs_roots=None):
     """
     Visualizes the graph with highlighted shortest paths from each BFS root node.
     Distinct styling for isolated nodes, optional visualization of individual connected components.
     """
-    
-    nx.draw(graph, with_labels=True, node_color="lightblue", edge_color="gray")
-    plt.show()
+    pos = nx.spring_layout(graph, seed=123)  # deterministic layout
 
+    # Identify isolated nodes
+    isolated_nodes = list(nx.isolates(graph))
+    normal_nodes = [n for n in graph.nodes() if n not in isolated_nodes]
+
+    # Draw normal nodes and edges
+    nx.draw_networkx_nodes(graph, pos, nodelist=normal_nodes, node_color="lightblue", node_size=500)
+    nx.draw_networkx_edges(graph, pos, edge_color="gray")
+    nx.draw_networkx_labels(graph, pos)
+
+    # Draw isolated nodes differently
+    if isolated_nodes:
+        nx.draw_networkx_nodes(graph, pos, nodelist=isolated_nodes, node_color="red", node_size=500)
+
+    # Highlight BFS shortest paths if roots are provided
+    legend_patches = [
+        mpatches.Patch(color="lightblue", label="Normal Node"),
+        mpatches.Patch(color="red", label="Isolated Node")
+    ]
+
+    if bfs_roots:
+        colors = ["green", "orange", "purple", "cyan", "magenta", "yellow"]  # cycle if needed
+        for i, root in enumerate(bfs_roots):
+            if root in graph:
+                color = colors[i % len(colors)]
+                paths = nx.single_source_shortest_path(graph, root)
+                for target, path in paths.items():
+                    if len(path) > 1:
+                        edges_in_path = list(zip(path[:-1], path[1:]))
+                        nx.draw_networkx_edges(graph, pos, edgelist=edges_in_path, width=2.5, edge_color=color)
+                # Add legend entry for this root
+                legend_patches.append(mpatches.Patch(color=color, label=f"BFS from {root}"))
+
+    plt.title("Graph Visualization")
+    plt.legend(handles=legend_patches, loc="upper right")
+    plt.show()
 
 def output(graph, filename):
     """Saves the final graph, with all computed attributes
@@ -201,7 +240,7 @@ if __name__ == "__main__":
         analyze(G)
 
     if args.plot:
-        plot(G)
+        plot(G, args.multi_BFS)
 
     if args.output:
         output(G, args.output)

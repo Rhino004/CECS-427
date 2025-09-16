@@ -27,7 +27,6 @@ To generate: `python ./Graph.py --create_random_graph 200 1.5 --multi_BFS 0 5 20
 If generating a graph (as in the above command), you should see the resulting graph's BFS 0, 5, 20, then itself consecutively as you close each window:
 [from0](./images/from0.png)
 [from5](./images/from5.png)
-[from20](./images/from20.png)
 [graph](./images/graph.png)
 
 To view: `python ./graph.py --input out/final_graph.gml --analyze --plot`
