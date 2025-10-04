@@ -115,35 +115,98 @@ def verify_balanced_graph(Graph):
             return False
     return True
 
-def output(filename):
+def output(graph, filename):
     """
     Save the final graph with all updated node/edge attributes.
     """
-    pass
+    nx.write_gml(graph, filename)
 
-def simulate_failures(k):
+def simulate_failures(Graph, k):
     """
     Randomly remove k edges and analyze:
     Change in average shortest path
     Number of disconnected components
     Impact on betweenness centrality
     """
-    pass
+    original_avg_shortest_path = nx.average_shortest_path_length(Graph)
+    original_num_components = nx.number_connected_components(Graph)
+    original_betweenness_centrality = nx.betweenness_centrality(Graph)
 
-def robustnes_check(k):
+    # Randomly remove k edges
+    edges = list(Graph.edges())
+    np.random.shuffle(edges)
+    for u, v in edges[:k]:
+        Graph.remove_edge(u, v)
+
+    # Analyze the impact
+    new_avg_shortest_path = nx.average_shortest_path_length(Graph)
+    new_num_components = nx.number_connected_components(Graph)
+    new_betweenness_centrality = nx.betweenness_centrality(Graph)
+
+    # Report the findings
+    return {
+        "avg_shortest_path": (original_avg_shortest_path, new_avg_shortest_path),
+        "num_components": (original_num_components, new_num_components),
+        "betweenness_centrality": (original_betweenness_centrality, new_betweenness_centrality)
+    }
+
+
+def robustness_check(Graph, k):
     """
     Perform multiple simulations of k random edge failures and report:
     Average number of connected components
     Max/min component sizes
     Whether original clusters persist
     """
-    pass
-def temporal_simulation(filename):
+    
+    num_simulations = 10
+    component_counts = []
+    component_sizes = []
+
+    for _ in range(num_simulations):
+        G_copy = Graph.copy()
+        edges = list(G_copy.edges())
+        np.random.shuffle(edges)
+        for u, v in edges[:k]:
+            G_copy.remove_edge(u, v)
+
+        components = list(nx.connected_components(G_copy))
+        component_counts.append(len(components))
+        component_sizes.extend([len(c) for c in components])
+
+    return {
+        "avg_num_components": np.mean(component_counts),
+        "max_component_size": max(component_sizes),
+        "min_component_size": min(component_sizes)
+    }
+def temporal_simulation(Graph, filename):
     """
     Load a time series of edge changes in CSV format (source,target,timestamp,action) and animate the graph evolution:
     """
+    df = pd.read_csv(filename)
+    df = df.sort_values(by="timestamp")
+    timestamps = df["timestamp"].unique()
 
-if __name__ == "main":
+    pos = nx.spring_layout(Graph)
+
+    for t in timestamps:
+        changes = df[df["timestamp"] == t]
+        for _, row in changes.iterrows():
+            if row["action"] == "add":
+                Graph.add_edge(row["source"], row["target"])
+            elif row["action"] == "remove":
+                if Graph.has_edge(row["source"], row["target"]):
+                    Graph.remove_edge(row["source"], row["target"])
+
+        plt.clf()
+        nx.draw(Graph, pos, with_labels=True, node_color="lightblue", edge_color="grey")
+        plt.title(f"Graph at time {t}")
+        plt.pause(1)  # Pause to visualize the change
+
+    plt.show()
+
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("Graph", 
                         help="name of the graph file")
@@ -163,4 +226,47 @@ if __name__ == "main":
                         help="name of the csv file that would animate the graph evolution")
 
     args = parser.parse_args()
-    pass
+
+    Graph = load_graph(args.Graph)
+    print(f"Graph loaded with {Graph.number_of_nodes()} nodes and {Graph.number_of_edges()} edges.")
+    # Perform requested analyses
+    # Each function should print or return its results as appropriate
+    #Partition the graph into n components
+    if args.components:
+        n = int(args.components)
+        communities = partition_graph(Graph, n)
+        print(f"Graph partitioned into {n} components: {communities}")
+    #Robustness check
+    if args.robustness_check:
+        k = int(args.robustness_check)
+        robustness_results = robustness_check(Graph, k)
+        print(f"Robustness check results: {robustness_results}")
+    #Temporal simulation
+    if args.temporal_simulation:
+        temporal_simulation(Graph, args.temporal_simulation)
+    #Plotting
+    if args.plot:
+        plot(Graph, args.plot)
+    #Homophily and balanced graph verification
+    if args.verify_homophily:
+        homophily_results = verify_homophily(Graph)
+        if homophily_results:
+            print(f"Homophily test results: {homophily_results}")
+        else:
+            print("Not enough data to perform homophily test.")
+    
+    if args.verify_balanced_graph:
+        balanced_results = verify_balanced_graph(Graph)
+        if balanced_results:
+            print(f"Balanced graph test results: {balanced_results}")
+        else:
+            print("Not enough data to perform balanced graph test.")
+    #Simulate failures
+    if args.simulate_failures:
+        k = int(args.simulate_failures)
+        failure_results = simulate_failures(Graph, k)
+        print(f"Simulation of failures results: {failure_results}")
+    #Output the graph
+    if args.output:
+        output(Graph, args.output)
+        print(f"Graph saved to {args.output}")
