@@ -6,17 +6,24 @@
 import argparse
 import networkx as nx
 import matplotlib.pyplot as plt
-import random
 import numpy as np
 import pandas as pd
 from scipy import stats
 from networkx.algorithms.community import girvan_newman
 
-def load_graph(filename):
+def load_graph(fileName):
     """
     Load a graph from an edge list file.
     """
-    return nx.read_edgelist(filename, data=(('sign', int),))
+    try:
+        graph = nx.read_edgelist(fileName)
+        # Normalize node labels to strings for consistency
+        return graph
+    except FileNotFoundError:
+        print(f"[input]The File {fileName} doesn't exist")
+    except (nx.NetworkXError, OSError, ValueError) as e:
+        print(f"[input] Error: Could not read graph from '{fileName}': {e}")
+        return None
 
 def compute_clustering_coefficient(Graph):
     """Compute clustering coefficient for all nodes"""
@@ -39,10 +46,13 @@ def partition_graph(Graph, n):
     partition the graph into n components using the Girvan-Newman method
     """
     comp = girvan_newman(Graph)
-    communities = None
-    for i in range(n - 1):
-        communities = next(comp)
-    return [list(c) for c in communities]
+    try:
+        for _ in range(n - 1):
+            communities = next(comp)
+        return [list(c) for c in communities]
+    except StopIteration:
+        print(f"Warning: Cannot partition into {n} components. Returning current split.")
+        return [list(c) for c in communities]
 
 def plot(Graph, mode = "C"):
     """
@@ -52,6 +62,7 @@ def plot(Graph, mode = "C"):
     P: Plot the attributes e.g., node color, edge signs
     """
     pos = nx.spring_layout(Graph)
+    mode = mode.upper()
 
     if mode == "C":  # Clustering coefficient
         cc = compute_clustering_coefficient(Graph)
@@ -121,6 +132,12 @@ def output(graph, filename):
     """
     nx.write_gml(graph, filename)
 
+def safe_avg_shortest_path(G):
+    if nx.is_connected(G):
+        return nx.average_shortest_path_length(G)
+    else:
+        return np.mean([nx.average_shortest_path_length(G.subgraph(c)) for c in nx.connected_components(G)])
+
 def simulate_failures(Graph, k):
     """
     Randomly remove k edges and analyze:
@@ -128,7 +145,7 @@ def simulate_failures(Graph, k):
     Number of disconnected components
     Impact on betweenness centrality
     """
-    original_avg_shortest_path = nx.average_shortest_path_length(Graph)
+    original_avg_shortest_path = safe_avg_shortest_path(Graph)
     original_num_components = nx.number_connected_components(Graph)
     original_betweenness_centrality = nx.betweenness_centrality(Graph)
 
@@ -139,7 +156,7 @@ def simulate_failures(Graph, k):
         Graph.remove_edge(u, v)
 
     # Analyze the impact
-    new_avg_shortest_path = nx.average_shortest_path_length(Graph)
+    new_avg_shortest_path = safe_avg_shortest_path(Graph)
     new_num_components = nx.number_connected_components(Graph)
     new_betweenness_centrality = nx.betweenness_centrality(Graph)
 
@@ -214,8 +231,10 @@ if __name__ == "__main__":
                         help="number of components that you want to partition")
     parser.add_argument("--plot", 
                         help="The input can C, N, P, or T")
-    parser.add_argument("--verify_homophily")
-    parser.add_argument("--verify_balanced_graph")
+    parser.add_argument("--verify_homophily", action="store_true",
+                        help="Check if the graph exhibits homophily")
+    parser.add_argument("--verify_balanced_graph", action="store_true",
+                        help="Check if the signed graph is balanced")
     parser.add_argument("--output", 
                         help="The name you want the output file to be")
     parser.add_argument("--simulate_failures", 
