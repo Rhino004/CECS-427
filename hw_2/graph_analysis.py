@@ -16,14 +16,28 @@ def load_graph(fileName):
     Load a graph from an edge list file.
     """
     try:
-        graph = nx.read_edgelist(fileName)
+        # Try reading as GML
+        graph = nx.read_gml(fileName, label='id')
+
         # Normalize node labels to strings for consistency
+        graph = nx.relabel_nodes(graph, str)
+        print(f"[input] Successfully loaded '{fileName}' as GML.")
         return graph
+
     except FileNotFoundError:
-        print(f"[input]The File {fileName} doesn't exist")
-    except (nx.NetworkXError, OSError, ValueError) as e:
-        print(f"[input] Error: Could not read graph from '{fileName}': {e}")
+        print(f"[input] Error: The file '{fileName}' does not exist.")
         return None
+
+    except (nx.NetworkXError, OSError, ValueError) as e:
+        print(f"[input] Warning: Could not read '{fileName}' as GML ({e}). Trying edge list instead...")
+        try:
+            graph = nx.read_edgelist(fileName, data=(('sign', int),))
+            graph = nx.relabel_nodes(graph, str)
+            print(f"[input] Successfully loaded '{fileName}' as edge list.")
+            return graph
+        except Exception as e2:
+            print(f"[input] Error: Failed to read '{fileName}' as both GML and edge list: {e2}")
+            return None
 
 def compute_clustering_coefficient(Graph):
     """Compute clustering coefficient for all nodes"""
@@ -66,6 +80,8 @@ def plot(Graph, mode = "C"):
 
     if mode == "C":  # Clustering coefficient
         cc = compute_clustering_coefficient(Graph)
+        fig, ax = plt.subplots()
+        fig.canvas.manager.set_window_title('Clustering Coefficient Visualization')
         nx.draw(
             Graph, pos, with_labels=True,
             node_size=[2000 * cc[n] for n in Graph.nodes()],
@@ -75,6 +91,8 @@ def plot(Graph, mode = "C"):
         )
 
     elif mode == "N":  # Neighborhood overlap
+        fig, ax = plt.subplots()
+        fig.canvas.manager.set_window_title('Neighborhood Overlap Visualization')
         overlap = compute_neighborhood_overlap(Graph)
         edge_colors = [Graph.degree(u) + Graph.degree(v) for u, v in Graph.edges()]
         edge_widths = [5 * overlap[(u, v)] for u, v in Graph.edges()]
@@ -88,6 +106,8 @@ def plot(Graph, mode = "C"):
         )
 
     elif mode == "P":  # Plot attributes
+        fig, ax = plt.subplots()
+        fig.canvas.manager.set_window_title('Attribute Visualization')
         node_colors = [Graph.nodes[n].get("color", "grey") for n in Graph.nodes()]
         edge_colors = [Graph[u][v].get("sign", "black") for u, v in Graph.edges()]
         nx.draw(
@@ -95,7 +115,7 @@ def plot(Graph, mode = "C"):
             node_color=node_colors,
             edge_color=edge_colors
         )
-
+        
     plt.show()
 
 def verify_homophily(Graph, attr = "color"):
@@ -104,14 +124,18 @@ def verify_homophily(Graph, attr = "color"):
     """
     same, diff = [], []
     for u, v in Graph.edges():
-        if Graph.nodes[u].get(attr) == Graph.nodes[v].get(attr):
-            same.append(1)
-        else:
-            diff.append(0)
+        if attr in Graph.nodes[u] and attr in Graph.nodes[v]:
+            if Graph.nodes[u][attr] == Graph.nodes[v][attr]:
+                same.append(1)
+            else:
+                diff.append(1)
+
     if same and diff:
         t, p = stats.ttest_ind(same, diff, equal_var=False)
         return {"t-statistic": t, "p-value": p}
-    return None
+    else:
+        print("[verify_homophily] Not enough data for statistical test.")
+        return None
 
 def verify_balanced_graph(Graph):
     """
@@ -126,11 +150,11 @@ def verify_balanced_graph(Graph):
             return False
     return True
 
-def output(graph, filename):
+def output(graph, fileName):
     """
     Save the final graph with all updated node/edge attributes.
     """
-    nx.write_gml(graph, filename)
+    nx.write_gml(graph, fileName)
 
 def safe_avg_shortest_path(G):
     if nx.is_connected(G):
@@ -196,30 +220,36 @@ def robustness_check(Graph, k):
         "max_component_size": max(component_sizes),
         "min_component_size": min(component_sizes)
     }
-def temporal_simulation(Graph, filename):
+def temporal_simulation(Graph, fileName):
     """
     Load a time series of edge changes in CSV format (source,target,timestamp,action) and animate the graph evolution:
     """
-    df = pd.read_csv(filename)
-    df = df.sort_values(by="timestamp")
-    timestamps = df["timestamp"].unique()
-
+    df = pd.read_csv(fileName)
+    if df.empty:
+        print(f"[temporal_simulation] '{fileName}' is empty or invalid.")
+        return
+    
+    pos = nx.spring_layout(Graph)
+    plt.ion()  # turn on interactive plotting
+    fig, ax = plt.subplots()
+    fig.canvas.manager.set_window_title("Temporal Simulation")
     pos = nx.spring_layout(Graph)
 
-    for t in timestamps:
-        changes = df[df["timestamp"] == t]
-        for _, row in changes.iterrows():
-            if row["action"] == "add":
-                Graph.add_edge(row["source"], row["target"])
-            elif row["action"] == "remove":
-                if Graph.has_edge(row["source"], row["target"]):
-                    Graph.remove_edge(row["source"], row["target"])
+    for _, row in df.iterrows():
+        u, v = str(row["source"]), str(row["target"])
+        action = row["action"].lower()
 
-        plt.clf()
-        nx.draw(Graph, pos, with_labels=True, node_color="lightblue", edge_color="grey")
-        plt.title(f"Graph at time {t}")
-        plt.pause(1)  # Pause to visualize the change
+        if action == "add":
+            Graph.add_edge(u, v)
+        elif action == "remove" and Graph.has_edge(u, v):
+            Graph.remove_edge(u, v)
 
+        ax.clear()
+        nx.draw(Graph, pos, ax=ax, with_labels=True, node_color="lightblue", edge_color="grey")
+        plt.title(f"t = {row['timestamp']} | {action} edge ({u}, {v})")
+        plt.pause(0.5)
+
+    plt.ioff()
     plt.show()
 
 
