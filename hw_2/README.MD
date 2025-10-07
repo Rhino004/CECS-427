@@ -24,7 +24,10 @@ The program runs directly from the terminal and uses command-line options to con
 - Python >= 3.11
 - install dependencies:
 
-    `pip install networkx matplotlib numpy` or `pip install -r requirements.txt` 
+    `pip install networkx matplotlib numpy pandas scipy` or `pip install -r requirements.txt` 
 
 # Running the code
 Example commands: 
+`python ./graph_analysis.py input_file.gml --components 3 --plot C --simulate_failure 5 --output output.gml`
+`python ./graph_analysis.py input_file.gml --plot n --temporal_simulation out/edges.csv`
+`python ./graph_analysis.py input_file.gml --verify_homophily --verify_balanced_graph --output out/verified_graph.gml` 
