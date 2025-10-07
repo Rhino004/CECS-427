@@ -6,6 +6,7 @@
 import argparse
 import networkx as nx
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -18,7 +19,6 @@ def load_graph(fileName):
     try:
         # Try reading as GML
         graph = nx.read_gml(fileName, label='id')
-
         # Normalize node labels to strings for consistency
         graph = nx.relabel_nodes(graph, str)
         print(f"[input] Successfully loaded '{fileName}' as GML.")
@@ -27,17 +27,9 @@ def load_graph(fileName):
     except FileNotFoundError:
         print(f"[input] Error: The file '{fileName}' does not exist.")
         return None
-
     except (nx.NetworkXError, OSError, ValueError) as e:
-        print(f"[input] Warning: Could not read '{fileName}' as GML ({e}). Trying edge list instead...")
-        try:
-            graph = nx.read_edgelist(fileName, data=(('sign', int),))
-            graph = nx.relabel_nodes(graph, str)
-            print(f"[input] Successfully loaded '{fileName}' as edge list.")
-            return graph
-        except Exception as e2:
-            print(f"[input] Error: Failed to read '{fileName}' as both GML and edge list: {e2}")
-            return None
+        print(f"[input] Error: Failed to read '{fileName}' as both GML and edge list: {e}")
+        return None
 
 def compute_clustering_coefficient(Graph):
     """Compute clustering coefficient for all nodes"""
@@ -82,13 +74,27 @@ def plot(Graph, mode = "C"):
         cc = compute_clustering_coefficient(Graph)
         fig, ax = plt.subplots()
         fig.canvas.manager.set_window_title('Clustering Coefficient Visualization')
+        node_colors = [Graph.degree(n) for n in Graph.nodes()]
         nx.draw(
             Graph, pos, with_labels=True,
             node_size=[2000 * cc[n] for n in Graph.nodes()],
-            node_color=[Graph.degree(n) for n in Graph.nodes()],
+            node_color=node_colors,
             cmap=plt.cm.viridis,
             edge_color="lightgrey"
         )
+        # Add colorbar for degree
+        sm = plt.cm.ScalarMappable(
+            cmap=plt.cm.viridis,
+            norm=plt.Normalize(vmin=min(node_colors), vmax=max(node_colors))
+        )
+        sm.set_array([])
+        cbar = plt.colorbar(sm, ax=ax)
+        cbar.set_label('Node Degree')
+
+        # Add a note explaining size meaning
+        ax.text(0.01, 0.98, "Node size = Clustering Coefficient",
+                transform=ax.transAxes, fontsize=10, verticalalignment='top')
+    
 
     elif mode == "N":  # Neighborhood overlap
         fig, ax = plt.subplots()
@@ -105,16 +111,43 @@ def plot(Graph, mode = "C"):
             edge_cmap=plt.cm.plasma
         )
 
+        # Add colorbar for edge color meaning (sum of degrees)
+        sm = plt.cm.ScalarMappable(
+            cmap=plt.cm.plasma,
+            norm=plt.Normalize(vmin=min(edge_colors), vmax=max(edge_colors))
+        )
+        sm.set_array([])
+        cbar = plt.colorbar(sm, ax=ax)
+        cbar.set_label('Sum of Node Degrees at Edge Endpoints')
+
+        # Add note for edge width meaning
+        ax.text(0.01, 0.98, "Edge thickness = Neighborhood Overlap",
+                transform=ax.transAxes, fontsize=10, verticalalignment='top')
+
     elif mode == "P":  # Plot attributes
         fig, ax = plt.subplots()
         fig.canvas.manager.set_window_title('Attribute Visualization')
-        node_colors = [Graph.nodes[n].get("color", "grey") for n in Graph.nodes()]
+        node_colors = [Graph.nodes[n].get("color", "lightblue") for n in Graph.nodes()]
         edge_colors = [Graph[u][v].get("sign", "black") for u, v in Graph.edges()]
         nx.draw(
             Graph, pos, with_labels=True,
             node_color=node_colors,
             edge_color=edge_colors
         )
+
+        # Build legend for attribute meaning
+        legend_handles = []
+        unique_colors = sorted(set(node_colors))
+        for color in unique_colors:
+            legend_handles.append(mpatches.Patch(color=color, label=f"Node color: {color}"))
+
+        unique_signs = sorted(set(edge_colors))
+        for color in unique_signs:
+            legend_handles.append(mpatches.Patch(color=color, label=f"Edge sign: {color}"))
+
+        ax.legend(handles=legend_handles, loc='upper right', fontsize=9)
+
+    plt.tight_layout()
         
     plt.show()
 
@@ -276,11 +309,22 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    #checks if the file is a GML file
+    if not args.Graph.endswith(".gml"):
+        print(f"[input] Warning: '{args.Graph}' is not a .gml file.")
+        exit(1)
     Graph = load_graph(args.Graph)
     print(f"Graph loaded with {Graph.number_of_nodes()} nodes and {Graph.number_of_edges()} edges.")
     # Perform requested analyses
     # Each function should print or return its results as appropriate
     #Partition the graph into n components
+    if Graph is None:
+        print("[input] Error: Graph could not be loaded. Exiting.")
+        exit(1)
+    if Graph.number_of_nodes() == 0 and Graph.number_of_edges() == 0:
+        print(f"[input] Warning: '{args.Graph}' is empty (no nodes or edges).")
+        exit(1)
+
     if args.components:
         n = int(args.components)
         communities = partition_graph(Graph, n)
