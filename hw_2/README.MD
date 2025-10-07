@@ -29,5 +29,5 @@ The program runs directly from the terminal and uses command-line options to con
 # Running the code
 Example commands: 
 `python ./graph_analysis.py input_file.gml --components 3 --plot C --simulate_failure 5 --output output.gml`
-`python ./graph_analysis.py input_file.gml --plot n --temporal_simulation out/edges.csv`
+`python ./graph_analysis.py input_file.gml --plot n --temporal_simulation edges.csv`
 `python ./graph_analysis.py input_file.gml --verify_homophily --verify_balanced_graph --output out/verified_graph.gml` 

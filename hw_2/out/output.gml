@@ -2,50 +2,56 @@ graph [
   node [
     id 0
     label "0"
+    color "red"
   ]
   node [
     id 1
     label "1"
+    color "blue"
   ]
   node [
     id 2
     label "2"
+    color "red"
   ]
   node [
     id 3
     label "3"
+    color "blue"
   ]
   node [
     id 4
     label "4"
+    color "red"
   ]
   node [
     id 5
     label "5"
+    color "blue"
   ]
   node [
     id 6
     label "6"
+    color "red"
   ]
   node [
     id 7
     label "7"
+    color "blue"
   ]
   node [
     id 8
     label "8"
+    color "red"
   ]
   node [
     id 9
     label "9"
+    color "blue"
   ]
   edge [
     source 0
     target 1
-  ]
-  edge [
-    source 0
-    target 2
   ]
   edge [
     source 0
@@ -66,6 +72,10 @@ graph [
   edge [
     source 0
     target 8
+  ]
+  edge [
+    source 0
+    target 9
   ]
   edge [
     source 1
@@ -81,11 +91,11 @@ graph [
   ]
   edge [
     source 1
-    target 7
+    target 6
   ]
   edge [
     source 1
-    target 9
+    target 7
   ]
   edge [
     source 2
@@ -101,7 +111,7 @@ graph [
   ]
   edge [
     source 2
-    target 9
+    target 8
   ]
   edge [
     source 3
@@ -112,16 +122,8 @@ graph [
     target 7
   ]
   edge [
-    source 3
-    target 8
-  ]
-  edge [
     source 4
     target 5
-  ]
-  edge [
-    source 4
-    target 6
   ]
   edge [
     source 4
@@ -134,6 +136,14 @@ graph [
   edge [
     source 5
     target 8
+  ]
+  edge [
+    source 5
+    target 9
+  ]
+  edge [
+    source 6
+    target 7
   ]
   edge [
     source 6

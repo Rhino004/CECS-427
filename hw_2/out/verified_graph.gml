@@ -2,42 +2,52 @@ graph [
   node [
     id 0
     label "0"
+    color "red"
   ]
   node [
     id 1
     label "1"
+    color "blue"
   ]
   node [
     id 2
     label "2"
+    color "red"
   ]
   node [
     id 3
     label "3"
+    color "blue"
   ]
   node [
     id 4
     label "4"
+    color "red"
   ]
   node [
     id 5
     label "5"
+    color "blue"
   ]
   node [
     id 6
     label "6"
+    color "red"
   ]
   node [
     id 7
     label "7"
+    color "blue"
   ]
   node [
     id 8
     label "8"
+    color "red"
   ]
   node [
     id 9
     label "9"
+    color "blue"
   ]
   edge [
     source 0

@@ -155,20 +155,17 @@ def verify_homophily(Graph, attr = "color"):
     """
     Statistical test (t-test) to check homophily using color-coded nodes attrbutes
     """
-    same, diff = [], []
+    samples = []
     for u, v in Graph.edges():
         if attr in Graph.nodes[u] and attr in Graph.nodes[v]:
-            if Graph.nodes[u][attr] == Graph.nodes[v][attr]:
-                same.append(1)
-            else:
-                diff.append(1)
-
-    if same and diff:
-        t, p = stats.ttest_ind(same, diff, equal_var=False)
-        return {"t-statistic": t, "p-value": p}
-    else:
-        print("[verify_homophily] Not enough data for statistical test.")
+            samples.append(1 if Graph.nodes[u][attr] == Graph.nodes[v][attr] else 0)
+    if not samples:
+        print("[verify_homophily] No valid edges with color info.")
         return None
+    ratio = sum(samples) / len(samples)
+    t, p = stats.ttest_1samp(samples, 0.5)  # compare to null hypothesis of 50% same-color
+
+    return {"t-statistic": t, "p-value": p, "homophily_ratio": ratio}
 
 def verify_balanced_graph(Graph):
     """
