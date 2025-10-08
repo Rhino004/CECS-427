@@ -284,6 +284,8 @@ def temporal_simulation(Graph, fileName):
             Graph.add_edge(u, v)
         elif action == "remove" and Graph.has_edge(u, v):
             Graph.remove_edge(u, v)
+        
+        pos = nx.spring_layout(Graph, pos=pos, iterations=5)
 
         ax.clear()
         nx.draw(Graph, pos, ax=ax, with_labels=True, node_color="lightblue", edge_color="grey")

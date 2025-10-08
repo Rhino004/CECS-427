@@ -63,6 +63,10 @@ graph [
   ]
   edge [
     source 0
+    target 5
+  ]
+  edge [
+    source 0
     target 6
   ]
   edge [
@@ -130,6 +134,10 @@ graph [
     target 7
   ]
   edge [
+    source 3
+    target 8
+  ]
+  edge [
     source 4
     target 5
   ]
@@ -147,6 +155,18 @@ graph [
   ]
   edge [
     source 5
+    target 8
+  ]
+  edge [
+    source 5
+    target 9
+  ]
+  edge [
+    source 6
+    target 7
+  ]
+  edge [
+    source 6
     target 8
   ]
   edge [
