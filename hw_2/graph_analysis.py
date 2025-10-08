@@ -18,11 +18,22 @@ def load_graph(fileName):
     """
     try:
         # Try reading as GML
-        graph = nx.read_gml(fileName, label='id')
+        Graph = nx.read_gml(fileName, label='id')
         # Normalize node labels to strings for consistency
-        graph = nx.relabel_nodes(graph, str)
+        for u, v, data in Graph.edges(data=True):
+            if "sign" in data:
+                sign = data["sign"]
+                if sign in ["+", "+1"]:
+                    data["sign"] = 1
+                elif sign in ["-", "-1"]:
+                    data["sign"] = -1
+                else:
+                    try:
+                        data["sign"] = int(sign)
+                    except ValueError:
+                        data["sign"] = 1  # default positive
         print(f"[input] Successfully loaded '{fileName}' as GML.")
-        return graph
+        return Graph
 
     except FileNotFoundError:
         print(f"[input] Error: The file '{fileName}' does not exist.")
@@ -175,7 +186,7 @@ def verify_balanced_graph(Graph):
         prod = 1
         for i in range(len(cycle)):
             u, v = cycle[i], cycle[(i + 1) % len(cycle)]
-            prod *= Graph[u][v].get("sign", 1)
+            prod *= int(Graph[u][v].get("sign", 1))
         if prod < 0:
             return False
     return True
@@ -343,14 +354,14 @@ if __name__ == "__main__":
         if homophily_results:
             print(f"Homophily test results: {homophily_results}")
         else:
-            print("Not enough data to perform homophily test.")
+            print(f"Homophily test results: {homophily_results}")
     
     if args.verify_balanced_graph:
         balanced_results = verify_balanced_graph(Graph)
         if balanced_results:
             print(f"Balanced graph test results: {balanced_results}")
         else:
-            print("Not enough data to perform balanced graph test.")
+            print(f"Balanced graph test results: {balanced_results}")
     #Simulate failures
     if args.simulate_failures:
         k = int(args.simulate_failures)
