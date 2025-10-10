@@ -67,10 +67,13 @@ def plot_graph(Graph, drivers, start, end):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Traffic Analysis using Game Theory")
-    parser.add_argument("input_file", type=str, help="Path to the input file containing the graph data")
+    parser.add_argument("Graph", type=str, help="Path to the input file containing the graph data")
+    parser.add_argument("drivers", type=int, help="Number of drivers in the simulation")
+    parser.add_argument("start", type=str, help="Starting node for drivers")
+    parser.add_argument("end", type=str, help="Ending node for drivers")
     parser.add_argument("--plot", 
-                        help="The input are n (number of drivers), starting node, ending node",
-                        nargs=3)
+                        help="Plot the graph with drivers' paths highlighted",
+                        action="store_true")
     args = parser.parse_args()
 
     #checks if the file is a GML file
@@ -79,3 +82,7 @@ if __name__ == "__main__":
         exit(1)
     Graph = load_graph(args.Graph)
     print(f"Graph loaded with {Graph.number_of_nodes()} nodes and {Graph.number_of_edges()} edges.")
+    if Graph is None:
+        exit(1)
+    if args.plot:
+        plot_graph(Graph, args.drivers, args.start, args.end)
