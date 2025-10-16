@@ -117,31 +117,54 @@ def plot_costs(edges, n):
     plt.grid(True)
     plt.show()
 
-def plot_graph(Graph, drivers, start, end):
+def plot_graph(Graph, paths, start, end):
     """
     Plot the graph with drivers' paths highlighted.
     """
-    pos = nx.spring_layout(Graph)
-    edge_colors = []
-    for u, v in Graph.edges():
-        if any((u, v) in path or (v, u) in path for path in drivers):
-            edge_colors.append('red')
-        else:
-            edge_colors.append('black')
+    pos = nx.spring_layout(Graph, seed=42)
 
-    nx.draw(Graph, pos, with_labels=True, edge_color=edge_colors, node_color='lightblue', node_size=500)
-    
+    # Collect all edges that appear in any path
+    highlighted_edges = set()
+    for path in paths:
+        for i in range(len(path) - 1):
+            highlighted_edges.add((path[i], path[i + 1]))
+
+    # Assign colors: red for highlighted edges, black for others
+    edge_colors = [
+        'red' if (u, v) in highlighted_edges else 'black'
+        for u, v in Graph.edges()
+    ]
+
+    # Build edge labels showing cost functions
+    edge_labels = {}
+    for u, v, data in Graph.edges(data=True):
+        a = data.get("a", 0)
+        b = data.get("b", 0)
+        edge_labels[(u, v)] = f"{a}x + {b}"
+
+    # Draw the network
+    nx.draw(
+        Graph, pos,
+        with_labels=True,
+        node_color='lightblue',
+        edge_color=edge_colors,
+        node_size=600,
+        arrows=True
+    )
+    # Draw edge labels (cost functions)
+    nx.draw_networkx_edge_labels(Graph, pos, edge_labels=edge_labels, font_color="blue", font_size=9)
+
+
     # Highlight start and end nodes
-    nx.draw_networkx_nodes(Graph, pos, nodelist=[start], node_color='green', node_size=700)
-    nx.draw_networkx_nodes(Graph, pos, nodelist=[end], node_color='orange', node_size=700)
+    nx.draw_networkx_nodes(Graph, pos, nodelist=[start], node_color='green', node_size=800)
+    nx.draw_networkx_nodes(Graph, pos, nodelist=[end], node_color='orange', node_size=800)
 
-    # Create legend
+    # Legend
     red_patch = mpatches.Patch(color='red', label='Driver Paths')
     green_patch = mpatches.Patch(color='green', label='Start Node')
     orange_patch = mpatches.Patch(color='orange', label='End Node')
     plt.legend(handles=[red_patch, green_patch, orange_patch])
-
-    plt.title("Traffic Network with Driver Paths")
+    plt.title("Traffic Network with Driver Paths Highlighted")
     plt.show()
 
 def extract_costs(Graph):
@@ -156,7 +179,7 @@ def extract_costs(Graph):
         except KeyError as e:
             print(f"[input] Error: Edge ({u}, {v}) is missing attribute {e}.")
             continue
-        edges.append((u, v), a, b)
+        edges.append(((u, v), a, b))
     return edges
 
 if __name__ == "__main__":
@@ -201,5 +224,5 @@ if __name__ == "__main__":
 
     # Optional plotting
     if args.plot:
-        plot_graph(Graph, args.start, args.end)
+        plot_graph(Graph, paths, args.start, args.end)
         plot_costs(edges, args.drivers)
