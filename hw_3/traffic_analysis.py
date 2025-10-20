@@ -1,273 +1,195 @@
-#CECS 427: Assignment game theory 
-#10/21/2025
-#Ryan Tomas
-#Nick Fan
+# CECS 427: Assignment game theory 
+# 10/21/2025
+# Ryan Tomas
+# Nick Fan
 
 import argparse
+import itertools
 import networkx as nx
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 import numpy as np
-from sympy import symbols, Eq, solve, diff
 
-def load_graph(fileName):
-    """
-    Load a graph from an edge list file.
-    """
-    try:
-        # Try reading as GML
-        Graph = nx.read_gml(fileName)
-        if not Graph.is_directed():
-            raise nx.NetworkXError("Graph is not directed.")
-        print(f"[input] Successfully loaded '{fileName}' as GML.")
-        return Graph
-    except FileNotFoundError:
-        print(f"[input] Error: The file '{fileName}' does not exist.")
-        return None
-    except (nx.NetworkXError, OSError, ValueError) as e:
-        print(f"[input] Error: Failed to read '{fileName}' as both GML and edge list: {e}")
-        return None
+# === Helper Functions ===
 
-def path_cost(edges, path):
-    """
-    Calculate the total cost of a given path.
-    """
-    a_total, b_total = 0, 0
-    for i in range(len(path) - 1):
-        u, v = path[i], path[i + 1]
-        for (x, y), a, b in edges:
-            if (x, y) == (u, v):
-                a_total += a
-                b_total += b
-                break
-        else:
-            raise ValueError(f"Missing edge ({u}->{v}) in edge list.")
-    return a_total, b_total
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="Traffic Equilibrium and Social Optimum Analysis.")
+    parser.add_argument("graph_file", help="Path to the directed .gml file")
+    parser.add_argument("n", type=int, help="Number of vehicles")
+    parser.add_argument("initial", type=int, help="Initial node")
+    parser.add_argument("final", type=int, help="Final node")
+    parser.add_argument("--plot", action="store_true", help="Plot graph and cost functions")
+    return parser.parse_args()
 
-def compute_edge_flows(Graph, paths, path_flows):
-    """
-    Given a list of paths and their respective flows,
-    compute how many vehicles use each edge.
-    """
-    edge_flows = {edge: 0 for edge in Graph.edges()}
-    for path, flow in zip(paths, path_flows):
+def load_graph(filepath):
+    """Load directed graph from .gml file"""
+    G = nx.read_gml(filepath, label="id")
+    if not G.is_directed():
+        G = G.to_directed()
+    return G
+
+def cost(a, b, x):
+    """Linear cost function"""
+    return a * x + b
+
+def all_paths(G, source, target):
+    """All simple paths from source to target"""
+    return list(nx.all_simple_paths(G, source, target))
+
+def distribute_vehicles(n, num_paths):
+    """All integer distributions of n vehicles across num_paths"""
+    for combo in itertools.product(range(n+1), repeat=num_paths):
+        if sum(combo) == n:
+            yield combo
+
+def edge_flows_from_path_distribution(G, paths, flow_distribution):
+    """Compute total vehicles per edge given path flow distribution"""
+    edge_flows = {(u, v): 0 for u, v in G.edges()}
+    for path, num_cars in zip(paths, flow_distribution):
         for i in range(len(path) - 1):
-            u, v = path[i], path[i + 1]
-            if (u, v) in edge_flows:
-                edge_flows[(u, v)] += flow
+            u, v = path[i], path[i+1]
+            edge_flows[(u, v)] += num_cars
     return edge_flows
 
+def compute_path_cost(G, path, edge_flows):
+    """Compute total cost of a path given current edge flows"""
+    total = 0
+    for i in range(len(path) - 1):
+        u, v = path[i], path[i+1]
+        a, b = G[u][v]["a"], G[u][v]["b"]
+        total += cost(a, b, edge_flows[(u, v)])
+    return total
 
-def compute_equilibrium(edges, paths, n):
-    """Compute the travel (Nash) equilibrium for a 2-path network."""
-    if len(paths) < 2:
-        print("[equilibrium] Error: Need at least 2 paths between start and end.")
-        return None
+def total_cost(G, edge_flows):
+    """Total social cost = sum over edges of (x_e * c(x_e))"""
+    total = 0
+    for (u, v), x in edge_flows.items():
+        a, b = G[u][v]["a"], G[u][v]["b"]
+        total += x * cost(a, b, x)
+    return total
 
-    f1 = symbols("f1", real=True)
-    a1, b1 = path_cost(edges, paths[0])
-    a2, b2 = path_cost(edges, paths[1])
+# === Social Optimum (brute-force) ===
+def find_social_optimum(G, paths, n):
+    best_cost = float("inf")
+    best_distribution = None
+    best_edge_flows = None
+    for dist in distribute_vehicles(n, len(paths)):
+        edge_flows = edge_flows_from_path_distribution(G, paths, dist)
+        c = total_cost(G, edge_flows)
+        if c < best_cost:
+            best_cost = c
+            best_distribution = dist
+            best_edge_flows = edge_flows
+    return best_distribution, best_edge_flows, best_cost
 
-    # Equal cost condition for both paths
-    eq = Eq(a1 * f1 + b1, a2 * (n - f1) + b2)
-    sol = solve(eq, f1)
+# === Nash Equilibrium (brute-force) ===
+def is_equilibrium(G, paths, dist):
+    edge_flows = edge_flows_from_path_distribution(G, paths, dist)
+    path_costs = [compute_path_cost(G, p, edge_flows) for p in paths]
+    for i, num_cars in enumerate(dist):
+        if num_cars > 0:
+            current_cost = path_costs[i]
+            for j, other_cost in enumerate(path_costs):
+                if other_cost + 1e-9 < current_cost:  # strict less
+                    return False
+    return True
 
-    if not sol:
-        print("[equilibrium] No valid equilibrium found.")
-        return None
+def find_nash_equilibrium(G, paths, n):
+    for dist in distribute_vehicles(n, len(paths)):
+        if is_equilibrium(G, paths, dist):
+            edge_flows = edge_flows_from_path_distribution(G, paths, dist)
+            return dist, edge_flows
+    return None, None
 
-    f1_val = float(sol[0])
-    f2_val = n - f1_val
+# === Display and Plot Functions ===
+def print_results(paths, eq_dist, eq_flows, opt_dist, opt_flows, opt_cost):
+    print("\n=== PATHS ===")
+    for i, p in enumerate(paths):
+        print(f"Path {i}: {p}")
 
-    print("\n=== Travel Equilibrium (Nash) ===")
-    print(f"Path 1: {paths[0]} | Flow: {f1_val:.2f}")
-    print(f"Path 2: {paths[1]} | Flow: {f2_val:.2f}")
-    cost_eq = a1 * f1_val + b1
-    print(f"Equilibrium travel cost per driver: {cost_eq:.2f}")
-
-    return f1_val, f2_val, cost_eq
-
-def compute_social_optimum(edges, paths, n):
-    """Compute the social optimum for a 2-path network."""
-    if len(paths) < 2:
-        print("[optimum] Error: Need at least 2 paths between start and end.")
-        return None
-
-    f1 = symbols("f1", real=True)
-    a1, b1 = path_cost(edges, paths[0])
-    a2, b2 = path_cost(edges, paths[1])
-
-    # Total cost function
-    total_cost = f1 * (a1 * f1 + b1) + (n - f1) * (a2 * (n - f1) + b2)
-    d_total_cost = diff(total_cost, f1)
-    sol = solve(Eq(d_total_cost, 0), f1)
-
-    if not sol:
-        print("[optimum] No valid social optimum found.")
-        return None
-
-    f1_val = float(sol[0])
-    f2_val = n - f1_val
+    print("\n=== Nash Equilibrium ===")
+    if eq_dist:
+        for i, num in enumerate(eq_dist):
+            print(f"  Path {i}: {num} vehicles")
+        for e, x in eq_flows.items():
+            print(f"  Edge {e}: {x} vehicles")
+    else:
+        print("  No equilibrium found.")
 
     print("\n=== Social Optimum ===")
-    print(f"Path 1: {paths[0]} | Flow: {f1_val:.2f}")
-    print(f"Path 2: {paths[1]} | Flow: {f2_val:.2f}")
-    cost_opt = a1 * f1_val + b1
-    print(f"Optimal travel cost per driver: {cost_opt:.2f}")
+    for i, num in enumerate(opt_dist):
+        print(f"  Path {i}: {num} vehicles")
+    for e, x in opt_flows.items():
+        print(f"  Edge {e}: {x} vehicles")
+    print(f"Total Social Cost: {opt_cost:.2f}")
 
-    return f1_val, f2_val, cost_opt
+def plot_graph(G, paths=None, path_flows=None, start=None, end=None):
+    pos = nx.spring_layout(G, seed=42)
+    # Highlight edges in paths if provided
+    edge_usage = {e: 0 for e in G.edges()}
+    if path_flows is not None and len(path_flows) > 0:
+        for path, flow in zip(paths, path_flows):
+            for i in range(len(path)-1):
+                u, v = path[i], path[i+1]
+                edge_usage[(u,v)] += flow
+    # Edge colors
+    highlighted_edges = set()
+    if paths:
+        for path in paths:
+            for i in range(len(path)-1):
+                highlighted_edges.add((path[i], path[i+1]))
+    edge_colors = ["red" if e in highlighted_edges else "black" for e in G.edges()]
+    # Edge labels
+    edge_labels = {}
+    for u, v in G.edges():
+        a, b = G[u][v]["a"], G[u][v]["b"]
+        label = f"{a}x+{b}"
+        if path_flows is not None and len(path_flows) > 0:
+            label += f"\n({int(edge_usage[(u,v)])} drivers)"
+        edge_labels[(u,v)] = label
+    # Draw
+    nx.draw(G, pos, with_labels=True, node_color="lightblue", edge_color=edge_colors, arrows=True)
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
+    # Highlight start/end nodes
+    if start is not None:
+        nx.draw_networkx_nodes(G, pos, nodelist=[start], node_color="green", node_size=800)
+    if end is not None:
+        nx.draw_networkx_nodes(G, pos, nodelist=[end], node_color="orange", node_size=800)
+    plt.title("Traffic Network")
+    plt.show()
 
-def plot_costs(edges, n):
-    """Plot the linear cost functions of each edge."""
+def plot_edge_costs(G, max_flow=20):
+    xs = range(0, max_flow+1)
     plt.figure()
-    x = np.linspace(0, n, 100)
-    for (u, v), a, b in edges:
-        y = a * x + b
-        plt.plot(x, y, label=f"{u}->{v}: {a}x + {b}")
-    plt.xlabel("Vehicles (x)")
-    plt.ylabel("Cost (C)")
-    plt.title("Edge Cost Functions")
+    for (u, v) in G.edges():
+        a, b = G[u][v]["a"], G[u][v]["b"]
+        ys = [cost(a, b, x) for x in xs]
+        plt.plot(xs, ys, label=f"{u}->{v}: {a}x+{b}")
+    plt.xlabel("Flow (x)")
+    plt.ylabel("Cost (c(x))")
     plt.legend()
+    plt.title("Edge Cost Functions")
     plt.grid(True)
     plt.show()
 
-def plot_graph(Graph, paths, start, end, path_flows=None):
-    """
-    Plot the graph with drivers' paths highlighted.
-    """
-    pos = nx.spring_layout(Graph, seed=42)
-
-    # === Collect edge usage counts ===
-    edge_usage = {edge: 0 for edge in Graph.edges()}
-    if path_flows:
-        for path, flow in zip(paths, path_flows):
-            for i in range(len(path) - 1):
-                u, v = path[i], path[i + 1]
-                if (u, v) in edge_usage:
-                    edge_usage[(u, v)] += flow
-
-    # === Collect all edges that appear in any path ===
-    highlighted_edges = set()
-    for path in paths:
-        for i in range(len(path) - 1):
-            highlighted_edges.add((path[i], path[i + 1]))
-
-    # === Assign edge colors ===
-    edge_colors = [
-        'red' if (u, v) in highlighted_edges else 'black'
-        for u, v in Graph.edges()
-    ]
-
-    # === Build edge labels showing cost functions and driver usage ===
-    edge_labels = {}
-    for u, v, data in Graph.edges(data=True):
-        a = data.get("a", 0)
-        b = data.get("b", 0)
-        label = f"{a}x + {b}"
-        if path_flows:
-            label += f"\n({int(round(edge_usage[(u, v)]))} drivers)"
-        edge_labels[(u, v)] = label
-
-    # === Draw the network ===
-    nx.draw(
-        Graph, pos,
-        with_labels=True,
-        node_color='lightblue',
-        edge_color=edge_colors,
-        node_size=600,
-        arrows=True
-    )
-
-    # === Draw edge labels ===
-    nx.draw_networkx_edge_labels(Graph, pos, edge_labels=edge_labels, font_color="blue", font_size=9)
-
-    # === Highlight start and end nodes ===
-    nx.draw_networkx_nodes(Graph, pos, nodelist=[start], node_color='green', node_size=800)
-    nx.draw_networkx_nodes(Graph, pos, nodelist=[end], node_color='orange', node_size=800)
-
-    # === Legend ===
-    red_patch = mpatches.Patch(color='red', label='Driver Paths')
-    green_patch = mpatches.Patch(color='green', label='Start Node')
-    orange_patch = mpatches.Patch(color='orange', label='End Node')
-    plt.legend(handles=[red_patch, green_patch, orange_patch])
-    plt.title("Traffic Network with Edge Costs and Driver Flow")
-    plt.show()
-
-def extract_costs(Graph):
-    """
-    Extract costs from graph edges.
-    """
-    edges = []
-    for u, v, data in Graph.edges(data=True):
-        try:
-            a = float(data['a'])
-            b = float(data['b'])
-        except KeyError as e:
-            print(f"[input] Error: Edge ({u}, {v}) is missing attribute {e}.")
-            continue
-        edges.append(((u, v), a, b))
-    return edges
-
+# === Main ===
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Traffic Analysis using Game Theory")
-    parser.add_argument("Graph", type=str, help="Path to the input file containing the graph data")
-    parser.add_argument("drivers", type=int, help="Number of drivers in the simulation")
-    parser.add_argument("start", type=str, help="Starting node for drivers")
-    parser.add_argument("end", type=str, help="Ending node for drivers")
-    parser.add_argument("--plot", 
-                        help="Plot the graph with drivers' paths highlighted",
-                        action="store_true")
-    args = parser.parse_args()
+    args = parse_arguments()
+    G = load_graph(args.graph_file)
+    n, s, t = args.n, args.initial, args.final
 
-    #checks if the file is a GML file
-    if not args.Graph.endswith(".gml"):
-        print(f"[input] Warning: '{args.Graph}' is not a .gml file.")
-        exit(1)
-    Graph = load_graph(args.Graph)
-    if Graph is None:
-        exit(1)
-    print(f"Graph loaded with {Graph.number_of_nodes()} nodes and {Graph.number_of_edges()} edges.")
-    edges = extract_costs(Graph)
-
-    # List paths
-    try:
-        paths = list(nx.all_simple_paths(Graph, source=args.start, target=args.end))
-    except nx.NetworkXNoPath:
-        print(f"[input] No path found between {args.start} and {args.end}.")
+    paths = all_paths(G, s, t)
+    if not paths:
+        print(f"No paths found from {s} to {t}.")
         exit(1)
 
-    print("\nAvailable paths:")
-    for i, p in enumerate(paths):
-        print(f"  Path {i+1}: {p}")
+    # Compute results
+    eq_dist, eq_flows = find_nash_equilibrium(G, paths, n)
+    opt_dist, opt_flows, opt_cost = find_social_optimum(G, paths, n)
 
-    if len(paths) < 2:
-        print("\n[warning] Only one path found — equilibrium/optimum not applicable.")
-        exit(0)
-
-    # Compute equilibrium and optimum
-    # Compute equilibrium and optimum
-eq_result = compute_equilibrium(edges, paths, args.drivers)
-opt_result = compute_social_optimum(edges, paths, args.drivers)
-
-if eq_result and opt_result:
-    f1_eq, f2_eq, _ = eq_result
-    f1_opt, f2_opt, _ = opt_result
-
-    # Compute per-edge vehicle flows
-    eq_flows = compute_edge_flows(Graph, paths[:2], [f1_eq, f2_eq])
-    opt_flows = compute_edge_flows(Graph, paths[:2], [f1_opt, f2_opt])
-
-    print("\n--- Per-Edge Vehicle Distribution ---")
-    print("Nash Equilibrium:")
-    for (u, v), flow in eq_flows.items():
-        print(f"  Edge ({u} -> {v}): {int(flow)} drivers")
-
-    print("\nSocial Optimum:")
-    for (u, v), flow in opt_flows.items():
-        print(f"  Edge ({u} -> {v}): {int(flow)} drivers")
+    # Print results
+    print_results(paths, eq_dist, eq_flows, opt_dist, opt_flows, opt_cost)
 
     # Optional plotting
     if args.plot:
-        plot_graph(Graph, paths[:2], args.start, args.end, [f1_eq, f2_eq])
-        plot_costs(edges, args.drivers)
-
+        plot_graph(G, paths, eq_dist, start=s, end=t)
+        plot_edge_costs(G, max_flow=n)
