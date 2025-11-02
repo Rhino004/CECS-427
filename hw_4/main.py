@@ -1,20 +1,3 @@
-"""
-Description:
-    Reads a bipartite graph in GML format where sellers are nodes 0..n-1
-    and buyers are nodes n..2n-1. Seller nodes should have a 'price' attribute
-    (defaults to 0). Edges should have a valuation attribute (supported names:
-    'valuation', 'value', 'weight').
-
-    Runs an ascending-price market-clearing simulation:
-      - Each buyer prefers seller(s) maximizing valuation - price
-      - Compute max matching on the preference graph
-      - If not perfect, find constricted sellers and increase their prices
-      - Repeat until perfect matching (market cleared) or max rounds reached
-
-Flags:
-    --plot       : show a plot of the graph (and if --interactive, plot each round)
-    --interactive: print round-by-round details
-"""
 import argparse
 import os
 import sys

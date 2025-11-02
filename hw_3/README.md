@@ -13,7 +13,7 @@ IN this assigment we are read a driected network graph off a gml file. When read
     `pip install networkx matplotlib` or `pip install -r requirements.txt` 
 
 # Running the code
-Example commands with GML file called traffic.gml and traffic2.gml: 
+Example commands: 
 `python ./traffic_analysis.py traffic.gml 4 0 3 --plot`
 `python ./traffic_analysis.py traffic.gml 4 1 3 --plot`
 `python ./traffic_analysis.py traffic2.gml 4 0 4 --plot`
