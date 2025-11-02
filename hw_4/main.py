@@ -335,18 +335,13 @@ def market_clearing(G, plot=False, interactive=False, eps=eps_default, max_round
     return final_matching, G
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description="Market-clearing algorithm on bipartite graphs (.gml)")
-    parser.add_argument("input_file", help="Input .gml file describing the bipartite market")
-    parser.add_argument("--plot", action="store_true", help="Plot the graph and (optionally) plot each round")
-    parser.add_argument("--interactive", action="store_true", help="Show output for every round")
-    parser.add_argument("--eps", type=float, default=eps_default, help="Price increment for constricted sellers (default 1.0)")
-    parser.add_argument("--max_rounds", type=int, default=max_rounds, help="Maximum number of rounds (default 500)")
-    return parser.parse_args()
-
 
 def main():
-    args = parse_args()
+    parser = argparse.ArgumentParser(description="Market-clearing algorithm on bipartite graphs")
+    parser.add_argument("input_file", help="Input .gml file")
+    parser.add_argument("--plot", action="store_true", help="Plot the graph")
+    parser.add_argument("--interactive", action="store_true", help="Show each round’s output")
+    args = parser.parse_args()
 
     try:
         G = read_graph(args.input_file)
@@ -354,40 +349,16 @@ def main():
         print("Error loading graph:", e)
         sys.exit(1)
 
-    # Validate expected bipartite labeling 0..2n-1
-    if len(G.nodes) % 2 != 0:
-        print("Error: graph must contain an even number of nodes (2n).")
-        sys.exit(1)
+    if args.plot:
+            plt.ion()
+            plt.figure(figsize=(7, 6))
+
+    market_clearing(G, interactive=args.interactive, plot=args.plot)
 
     if args.plot:
-        plt.ion()  # interactive mode for live updates
-        plt.figure(figsize=(8, 6))
-
-    try:
-        matching, G_final = market_clearing(G, plot=args.plot, interactive=args.interactive, eps=args.eps, max_rounds=args.max_rounds)
-    except Exception as e:
-        print("Error during market-clearing:", e)
-        sys.exit(1)
-
-    # Print final result
-    print("\n=== Final Result ===")
-    if matching:
-        print("Final matching (seller -> buyer):")
-        for s in sorted(matching):
-            print(f"  {s} -> {matching[s]}")
-    else:
-        print("No matching found.")
-
-    print("\nFinal seller prices:")
-    n = len(G_final.nodes) // 2
-    for s in range(0, n):
-        print(f"  Seller {s}: price = {G_final.nodes[s].get('price', 0.0):.4f}")
-
-    if args.plot:
-        # final static plot
-        plot_market(G_final, set(range(0, n)), set(range(n, 2*n)), matching=matching, title="Final Market")
         plt.ioff()
         plt.show()
+
 
 
 if __name__ == "__main__":
