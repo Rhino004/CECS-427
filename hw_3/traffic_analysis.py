@@ -125,7 +125,7 @@ def print_results(paths, eq_dist, eq_flows, opt_dist, opt_flows, opt_cost):
         print(f"  Edge {e}: {x} vehicles")
     print(f"Total Social Cost: {opt_cost:.2f}")
 
-def plot_graph(G, paths=None, path_flows=None, start=None, end=None):
+def plot_graph(G, paths, eq_dist=None, opt_dist=None, start=None, end=None):
     """Plot two graphs side-by-side: Nash Equilibrium and Social Optimum"""
     eq_flows = edge_flows_from_path_distribution(G, paths, eq_dist) if eq_dist else {e:0 for e in G.edges()}
     opt_flows = edge_flows_from_path_distribution(G, paths, opt_dist) if opt_dist else {e:0 for e in G.edges()}
@@ -195,5 +195,5 @@ if __name__ == "__main__":
 
     # Optional plotting
     if args.plot:
-        plot_graph(G, paths, eq_dist, start=s, end=t)
+        plot_graph(G, paths, eq_dist=eq_dist, opt_dist=opt_dist, start=s, end=t)
         plot_edge_costs(G, max_flow=n)
