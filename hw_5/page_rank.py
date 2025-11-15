@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import argparse
 import collections
 import math
@@ -14,7 +17,7 @@ try:
     from bs4 import BeautifulSoup
 except Exception as e:
     print("Missing dependencies. Please install: requests, beautifulsoup4, networkx, matplotlib",
-            file=sys.stderr)
+          file=sys.stderr)
     raise
 
 import matplotlib
@@ -61,10 +64,9 @@ def normalize_url(base: str, href: str) -> str | None:
 
 
 def same_domain(u: str, domain_root: str) -> bool:
-    """Restrict to a single domain rooted at domain_root (prefix match on netloc+path)."""
+    """Restrict to a single domain rooted at domain_root (hostname & scheme match)."""
     pu = urlparse(u)
     pr = urlparse(domain_root)
-    # enforce same hostname (allow subpath restriction)
     return (pu.hostname == pr.hostname) and (pu.scheme == pr.scheme)
 
 
@@ -93,7 +95,6 @@ def load_crawler_file(path: str):
         die("first line of crawler file must be an integer (max number of nodes)")
     domain = lines[1]
     seeds = lines[2:] or [domain]
-    # normalize domain line to a full URL
     if not urlparse(domain).scheme:
         die("domain line must be a full URL including scheme, e.g., https://example.com")
     return n, domain.rstrip("/"), [s.rstrip("/") for s in seeds]
@@ -106,13 +107,16 @@ def allowed_by_robots(user_agent: str, robots_url: str, target_url: str) -> bool
         rp.read()
         return rp.can_fetch(user_agent, target_url)
     except Exception:
-        # Fail-open if robots fetch fails (common in assignments);
-        # change to False if your instructor requires strict behavior.
+        # Fail-open if robots fetch fails (common in assignments).
         return True
 
 
 def crawl_domain(max_nodes: int, domain_root: str, seeds: list[str],
-                request_timeout: float = 8.0, throttle_s: float = 0.25) -> nx.DiGraph:
+                 request_timeout: float = 8.0, throttle_s: float = 0.25) -> nx.DiGraph:
+    """
+    Crawl up to `max_nodes` HTML pages within `domain_root` and build a DiGraph.
+    All discovered edges among those visited pages are included.
+    """
     ua = "CS-Pagerank-Crawler/1.0 (+educational; contact=noreply@example.com)"
     rob_url = urljoin(domain_root, "/robots.txt")
     G = nx.DiGraph()
@@ -131,7 +135,6 @@ def crawl_domain(max_nodes: int, domain_root: str, seeds: list[str],
         q.append(s)
 
     visited = set()
-
     session = requests.Session()
     session.headers.update({"User-Agent": ua})
 
@@ -166,16 +169,21 @@ def crawl_domain(max_nodes: int, domain_root: str, seeds: list[str],
                 continue
             lower = v.lower()
             if any(lower.endswith(ext) for ext in (".png", ".jpg", ".jpeg", ".gif", ".pdf",
-                                                    ".svg", ".zip", ".tar", ".gz", ".mp4", ".mp3")):
+                                                   ".svg", ".zip", ".tar", ".gz", ".mp4", ".mp3")):
                 continue
             outlinks.add(v)
 
+        # add edges and queue new pages until we reach the node cap
         for v in outlinks:
+            # Prevent add_edge from implicitly creating a new node past the cap
+            if v not in G and len(G) >= max_nodes:
+                continue
+
             G.add_edge(url, v)
+
             if v not in visited and v not in q and len(G) < max_nodes:
                 q.append(v)
 
-        # gentle throttle
         time.sleep(throttle_s)
 
     return G
@@ -187,16 +195,22 @@ def save_loglog_plot(G: nx.DiGraph, out_png: str = "degree_loglog.png"):
     if len(G) == 0:
         print("Graph is empty; skipping log-log plot.")
         return
-    # Use total degree distribution (in+out)
-    degrees = [deg for _node, deg in G.degree()]
-    counts = collections.Counter(degrees)
-    x = sorted(k for k in counts if k > 0)
+
+    # total degree (in + out); drop zeros to avoid -inf on log axis
+    degs = [d for _, d in G.degree() if d > 0]
+    if not degs:
+        print("All degrees are zero; skipping log-log plot.")
+        return
+
+    counts = collections.Counter(degs)
+    x = sorted(counts.keys())
     y = [counts[k] for k in x]
-    plt.figure(figsize=(6, 4.5))
-    plt.loglog(x, y, marker="o", linestyle="None")
-    plt.xlabel("Degree (log)")
-    plt.ylabel("#Nodes (log)")
-    plt.title("Degree distribution (log-log)")
+
+    plt.figure(figsize=(7, 5))
+    plt.loglog(x, y)
+    plt.title("LogLog Plot")
+    plt.xlabel("degree (log)")
+    plt.ylabel("number of nodes (log)")
     plt.tight_layout()
     plt.savefig(out_png, dpi=180)
     print(f"Saved log-log plot to {out_png}")
@@ -209,7 +223,6 @@ def compute_and_write_pagerank(G: nx.DiGraph, out_path: str, alpha: float = 0.85
         pr = nx.pagerank(G, alpha=alpha, max_iter=100, tol=1.0e-06)
     except nx.PowerIterationFailedConvergence as e:
         die(f"PageRank did not converge: {e}")
-    # sort by score desc, then by url
     ranked = sorted(pr.items(), key=lambda kv: (-kv[1], kv[0]))
     with open(out_path, "w", encoding="utf-8") as f:
         for url, score in ranked:
@@ -227,7 +240,6 @@ def read_gml_graph(gml_path: str) -> nx.DiGraph:
     except Exception as e:
         die(f"Failed to read GML: {e}")
     if not isinstance(G, (nx.DiGraph, nx.MultiDiGraph)):
-        # make directed if needed
         G = nx.DiGraph(G)
     elif isinstance(G, nx.MultiDiGraph):
         G = nx.DiGraph(G)  # collapse multiedges
@@ -242,22 +254,85 @@ def write_gml_graph(G: nx.DiGraph, out_path: str):
         die(f"Failed to write GML: {e}")
 
 
+# ---------------------------- Induced subgraph ---------------------------- #
+
+def induced_subgraph(G: nx.Graph | nx.DiGraph, nodes: list[str]) -> nx.DiGraph:
+    """
+    Return the induced subgraph on `nodes`: all nodes and all edges whose
+    endpoints are both in that set.
+    """
+    H = G.subgraph(nodes)
+    if isinstance(H, nx.MultiDiGraph):
+        H = nx.DiGraph(H)
+    elif not isinstance(H, nx.DiGraph):
+        H = nx.DiGraph(H)
+    return H.copy()
+
+
+# ------------------------------ Plotting ---------------------------------- #
+
+# FIX: accept `pick` to match main() call and CLI arg
+def plot_graph(G: nx.DiGraph, out_png: str = "graph_plot.png", exact_nodes: int = 11, pick: str = "first"):
+    """
+    Plot an induced subgraph with exactly `exact_nodes` nodes, including all edges among them.
+    pick: "first"  -> first N nodes in G.nodes()
+          "degree" -> top N by total degree (in+out)
+    """
+    if G.number_of_nodes() == 0:
+        print("Graph is empty; skipping plot.")
+        return
+
+    if pick == "degree":
+        deg = dict(G.degree())
+        chosen = [n for n, _ in sorted(deg.items(), key=lambda kv: (-kv[1], kv[0]))[:exact_nodes]]
+    else:
+        chosen = list(G.nodes())[:exact_nodes]
+
+    H = induced_subgraph(G, chosen)
+    print(f"Plotting induced subgraph with {len(H.nodes())} nodes and {len(H.edges())} edges.")
+
+    plt.figure(figsize=(12, 8))
+    pos = nx.spring_layout(H, k=0.45, iterations=200, seed=7)
+
+    nx.draw_networkx_nodes(
+        H, pos, node_size=140, node_color="#9ecae1", alpha=0.9,
+        linewidths=0.5, edgecolors="#5b8fb1",
+    )
+    nx.draw_networkx_edges(
+        H, pos, arrows=True, arrowstyle='-|>', arrowsize=8,
+        width=1.0, edge_color="#7f7f7f", alpha=0.8,
+    )
+    nx.draw_networkx_labels(H, pos, font_size=7, font_color="#222222")
+
+    plt.axis("off")
+    plt.tight_layout()
+    plt.savefig(out_png, dpi=200)
+    plt.close()
+    print(f"Saved graph visualization to {out_png}")
+
+
 # ------------------------------ Main -------------------------------------- #
 
 def parse_args():
     p = argparse.ArgumentParser(
-        description="Create a web graph (crawler or GML), compute PageRank, and optionally plot log-log degree distribution."
+        description="Create a web graph (crawler or GML), compute PageRank, and optionally generate plots."
     )
     p.add_argument("--crawler", type=str, default=None,
-                    help="Path to crawler.txt (max_nodes, domain, seeds). If given, crawling is used.")
+                   help="Path to crawler.txt (max_nodes, domain, seeds). If given, crawling is used.")
     p.add_argument("--input", type=str, default=None,
-                    help="Path to an existing directed graph in GML. Used when --crawler is not provided.")
+                   help="Path to an existing directed graph in GML. Used when --crawler is not provided.")
     p.add_argument("--loglogplot", action="store_true",
-                    help="Generate log-log plot of degree distribution (PNG).")
+                   help="Generate log-log plot of degree distribution (PNG).")
     p.add_argument("--crawler_graph", type=str, default=None,
-                    help="If crawling, save resulting graph to this GML path.")
+                   help="If crawling, save resulting graph to this GML path.")
     p.add_argument("--pagerank_values", type=str, default=None,
-                    help="Write PageRank scores here (required for grading examples).")
+                   help="Write PageRank scores here (required for grading examples).")
+
+    # plot of the graph structure (11-node induced subgraph)
+    p.add_argument("--plot", nargs="?", const="graph_plot.png", default=None,
+                   help="Save an induced-subgraph (11 nodes) visualization to PNG (default: graph_plot.png).")
+    p.add_argument("--plot_pick", choices=["first", "degree"], default="first",
+                   help='How to choose the 11 nodes for the induced subgraph: "first" or "degree".')
     return p.parse_args()
 
 
@@ -265,7 +340,9 @@ def main():
     args = parse_args()
 
     if args.crawler:
-        max_nodes, domain_root, seeds = load_crawler_file(args.crawler)
+        # Hard cap: crawl at most 11 nodes as requested
+        _nfile, domain_root, seeds = load_crawler_file(args.crawler)
+        max_nodes = 11
         print(f"Crawling up to {max_nodes} pages in domain {domain_root} ...")
         G = crawl_domain(max_nodes, domain_root, seeds)
         print(f"Crawled graph: |V|={G.number_of_nodes()} |E|={G.number_of_edges()}")
@@ -285,6 +362,11 @@ def main():
         compute_and_write_pagerank(G, args.pagerank_values)
     else:
         print("Note: --pagerank_values not provided; PageRank results will not be written.")
+
+    if args.plot:
+        # Induced subgraph on exactly 11 nodes with all edges among them
+        plot_graph(G, out_png=args.plot, exact_nodes=11, pick=args.plot_pick)
+
 
 if __name__ == "__main__":
     main()

@@ -15,6 +15,7 @@ pip install networkx requests beautifulsoup4 matplotlib
 - If you already have a GML file, use --input instead of --crawler.
 
 ### how to run 
-` python ./page_rank.py --crawler crawler.txt --loglogplot --crawler_graph out_graph.gml --pagerank_values node_rank.txt `
+` python ./page_rank.py --crawler crawlingFile.txt --loglogplot --crawler_graph out_graph.gml --pagerank_values node_rank.txt --plot `
 
-` python ./page_rank.py --input graph.gml --loglogplot --pagerank_values node_rank.txt `
+` python ./page_rank.py --input input_graph.gml --loglogplot --pagerank_values node_rank.txt `
+`  python ./page_rank.py --input input_graph.gml --loglogplot --pagerank_values node_rank.txt `
