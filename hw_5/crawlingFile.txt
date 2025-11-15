@@ -1,5 +1,11 @@
-100
+1000
 https://dblp.org/pid
 https://dblp.org/pid/e/PErdos.html
 https://dblp.org/pid/s/PaulGSpirakis.html
 https://dblp.org/pid/89/8192.html
+https://dblp.org/db/about/team.html
+https://dblp.org/db/about/advisoryboard.html
+https://dblp.org/db/about/privacy.html
+https://dblp.org/db/conf/index.html
+https://dblp.org/db/journals/index.html
+https://dblp.org/rec/journals/corr/abs-2502-07000.html
