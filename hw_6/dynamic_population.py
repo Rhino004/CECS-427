@@ -1,22 +1,3 @@
-#!/usr/bin/env python3
-"""
-dynamic_population.py
-
-Simulate:
-
-1. Cascade dynamics on a directed graph (threshold model)
-2. COVID-like SIRS epidemic with shelter-in-place and vaccination
-
-Usage (examples):
-    python ./dynamic_population.py graph.gml --action cascade \
-        --initiator 1,2,5 --threshold 0.33 --plot
-
-    python ./dynamic_population.py graph.gml --action covid \
-        --initiator 3,4 --probability_of_infection 0.02 \
-        --probability_of_death 0.01 --lifespan 100 \
-        --shelter 0.3 --vaccination 0.24 --plot --interactive
-"""
-
 import argparse
 import os
 import sys

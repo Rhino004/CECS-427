@@ -3,12 +3,13 @@
 **Team Members:**
 - Ryan Tomas(028210102)
 - Nick Fan(028347343)
-# Description:
+
 ## Requirements
 Python 3.9+
 pip install networkx matplotlib
 
 # Description:
+The program reads a graph with a file type of GML. Then it will run simulations a spread of a viruas across a population. This is possible with the use of casscabing behavior. 
 This project provides a command-line simulation tool, dynamic_population.py, for modeling:
 
 Cascade activation on a directed graph (threshold model)
