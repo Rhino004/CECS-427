@@ -298,7 +298,7 @@ def simulate_covid(G: nx.DiGraph,
         mpatches.Patch(facecolor='green', edgecolor='black', label='Recovered (R)'),
         mpatches.Patch(facecolor='black', edgecolor='black', label='Dead (D)'),
         mpatches.Patch(facecolor='blue', edgecolor='black', label='Vaccinated (V)'),
-        mpatches.Patch(facecolor='yellow', edgecolor='black', label='Sheltered (S)')
+        mpatches.Patch(facecolor='yellow', edgecolor='black', label='Sheltered (Sh)')
     ]
 
     for t in range(lifespan):
@@ -397,7 +397,7 @@ def simulate_covid(G: nx.DiGraph,
 
             nx.draw(G, pos, with_labels=True, node_color=color_map, ax=ax)
 
-            ax.legend(handles=legend_elements, loc="upper right")
+            ax.legend(handles=legend_elements, loc="upper left")
             ax.set_title(f"COVID SIRS - Day {t + 1}")
 
             fig.canvas.draw()
